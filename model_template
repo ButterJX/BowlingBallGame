@@ -1,0 +1,6 @@
+Number of triangles in the model
+point 1 x, y, z; point 2 x, y, z; point 3 x, y, z
+texture coordinate of point 1 x, y; point 2 x, y
+name of file to use as texture
+repeat last three lines for every face in the model.
+Note the counter clockwise ordering of the points.
