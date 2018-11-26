@@ -22,16 +22,26 @@ using namespace std;
 const float pi = 3.14159;
 
 int winid;
-float cpos[] = {0, 0, 0};
+float cpos[] = {0.0, 1.5, 0.0};
 float cangle[] = {0, 0};
+float l1pos[] = {0, 1, 0, 1};
+float amb[] = {0.2, 0.2, 0.2, 1.0};
+float dif[] = {0.8, 0.8, 0.8, 1.0};
+float spec[] = {0.85, 0.85, 0.85, 1.0};
+float ambh[] = {0.3, 0.0, 0.0, 1.0};
+float difh[] = {0.8, 0.0, 0.0, 1.0};
+float spech[] = {1.0, 0.0, 0.0, 1.0};
+float l1amb[] = {0.2, 0.2, 0.2, 1.0};
+float l1dif[] = {0.8, 0.8, 0.8, 1.0};
+float l1spec[] = {0.85, 0.85, 0.85, 1.0};
 float t[3145728];
+bool keyw, keys, keya, keyd, keyq, keye, keyup, keydown, keyleft, keyright = false;
 GLuint tex[2];
 string texnames[2] = {"grass.ppm", "blocks1.ppm"};
 
 class Point{
-	float x;
-	float y;
-	float z;
+	float x, y, z;
+	float norm[3];
 	public:
 	void set(float a, float b, float c){
 		x = a;
@@ -46,6 +56,24 @@ class Point{
 	}
 	float getz(){
 		return z;
+	}
+	void setnormx(float a){
+		norm[0] = a;
+	}
+	float getnormx(){
+		return norm[0];
+	}
+	void setnormy(float a){
+		norm[1] = a;
+	}
+	float getnormy(){
+		return norm[1];
+	}
+	void setnormz(float a){
+		norm[2] = a;
+	}
+	float getnormz(){
+		return norm[2];
 	}
 };
 
@@ -86,10 +114,28 @@ class Triangle{
 		while(a.compare(texnames[i]) != 0){
 			i++;
 		}
-		texid = i + 1;
+		texid = i;
 	}
 	int gettexid(){
 		return texid;
+	}
+	void setnormx(float a){
+		norm[0] = a;
+	}
+	float getnormx(){
+		return norm[0];
+	}
+	void setnormy(float a){
+		norm[1] = a;
+	}
+	float getnormy(){
+		return norm[1];
+	}
+	void setnormz(float a){
+		norm[2] = a;
+	}
+	float getnormz(){
+		return norm[2];
 	}
 };
 
@@ -187,7 +233,6 @@ class Model{
 			}
 			tri.back().settexid(t);
 		}
-		//points.shrink_to_fit();
 		f.close();
 	}
 	Triangle* gettri(int i){
@@ -208,9 +253,114 @@ class Model{
 	int pointsl(){
 		return points.size();
 	}
+	void setnorms(){
+		float n1[3];
+		float n2[3];
+		float h1, h2, h3, h4;
+		for(int i = 0; i < tri.size(); i++){
+			n1[0] = (*tri[i].gete2()).getx() - (*tri[i].gete1()).getx();
+			n1[1] = (*tri[i].gete2()).gety() - (*tri[i].gete1()).gety();
+			n1[2] = (*tri[i].gete2()).getz() - (*tri[i].gete1()).getz();
+			n2[0] = (*tri[i].gete3()).getx() - (*tri[i].gete1()).getx();
+			n2[1] = (*tri[i].gete3()).gety() - (*tri[i].gete1()).gety();
+			n2[2] = (*tri[i].gete3()).getz() - (*tri[i].gete1()).getz();
+			h1 = (n1[1] * n2[2]) - (n1[2] * n2[1]);
+			h2 = (n1[2] * n2[0]) - (n1[0] * n2[2]);
+			h3 = (n1[0] * n2[1]) - (n1[1] * n2[0]);
+			h4 = sqrt(pow(h1, 2.0) + pow(h2, 2.0) + pow(h3, 2.0));
+			tri[i].setnormx(h1 / h4);
+			tri[i].setnormy(h2 / h4);
+			tri[i].setnormz(h3 / h4);
+		}
+		for(int i = 0; i < points.size(); i++){
+			h1 = 0;
+			h2 = 0;
+			h3 = 0;
+			for(int j = 0; j < tri.size(); j++){
+				if(tri[j].gete1() == &points[i] || tri[j].gete2() == &points[i] || tri[j].gete3() == &points[i]){
+					h1 += tri[j].getnormx();
+					h2 += tri[j].getnormy();
+					h3 += tri[j].getnormz();
+				}
+			}
+			h4 = sqrt(pow(h1, 2.0) + pow(h2, 2.0) + pow(h3, 2.0));
+			points[i].setnormx(h1 / h4);
+			points[i].setnormy(h2 / h4);
+			points[i].setnormz(h3 / h4);
+		}
+	}
 };
 
-Model m;
+class Object{
+	float pos[3] = {0.0, 0.0, 0.0};
+	float angle[3] = {0.0, 0.0, 0.0};
+	float scale[3] = {1.0, 1.0, 1.0};
+	Model* m;
+	public:
+	void setposx(float a){
+		pos[0] = a;
+	}
+	float getposx(){
+		return pos[0];
+	}
+	void setposy(float a){
+		pos[1] = a;
+	}
+	float getposy(){
+		return pos[1];
+	}
+	void setposz(float a){
+		pos[2] = a;
+	}
+	float getposz(){
+		return pos[2];
+	}
+	void setanglex(float a){
+		angle[0] = a;
+	}
+	float getanglex(){
+		return angle[0];
+	}
+	void setangley(float a){
+		angle[1] = a;
+	}
+	float getangley(){
+		return angle[1];
+	}
+	void setanglez(float a){
+		angle[2] = a;
+	}
+	float getanglez(){
+		return angle[2];
+	}
+	void setscalex(float a){
+		scale[0] = a;
+	}
+	float getscalex(){
+		return scale[0];
+	}
+	void setscaley(float a){
+		scale[1] = a;
+	}
+	float getscaley(){
+		return scale[1];
+	}
+	void setscalez(float a){
+		scale[2] = a;
+	}
+	float getscalez(){
+		return scale[2];
+	}
+	void setmodel(Model* a){
+		m = a;
+	}
+	Model* getmodel(){
+		return m;
+	}
+};
+
+vector<Model> models;
+vector<Object> objects;
 
 void loadtexture(string k){
 	int h;
@@ -236,6 +386,15 @@ void init(void){
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, amb);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, dif);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spec);
+	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 10.0);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, l1amb);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, l1dif);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, l1spec);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(45.0, 1.0, 1.0, 500.0);
@@ -250,7 +409,25 @@ void init(void){
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
-	m.setmodel("model");
+	models.push_back(Model());
+	models.back().setmodel("model");
+	models.back().setnorms();
+	models.push_back(Model());
+	models.back().setmodel("room");
+	models.back().setnorms();
+	objects.push_back(Object());
+	objects.back().setmodel(&models[1]);
+	objects.push_back(Object());
+	objects.back().setposz(-5.0);
+	objects.back().setmodel(&models[0]);
+	objects.push_back(Object());
+	objects.back().setposx(1.0);
+	objects.back().setposy(1.0);
+	objects.back().setanglex(45.0);
+	objects.back().setangley(45.0);
+	objects.back().setscalex(0.5);
+	objects.back().setscalez(2.0);
+	objects.back().setmodel(&models[0]);
 }
 
 void reshape(int w, int h){
@@ -262,46 +439,148 @@ void reshape(int w, int h){
 }
 
 void keyboard(unsigned char key, int xin, int yin){
-	if(key == 'w'){
-		cpos[0] = cpos[0] + (sin(cangle[1] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] + (cos(cangle[1] * (pi / 180.0)) / 2);
-	}else if(key == 's'){
-		cpos[0] = cpos[0] - (sin(cangle[1] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] - (cos(cangle[1] * (pi / 180.0)) / 2);
-	}else if(key == 'a'){
-		cpos[0] = cpos[0] + (cos(cangle[1] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] - (sin(cangle[1] * (pi / 180.0)) / 2);
-	}else if(key == 'd'){
-		cpos[0] = cpos[0] - (cos(cangle[1] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] + (sin(cangle[1] * (pi / 180.0)) / 2);
-	}else if(key == 'q'){
-		cpos[1] = cpos[1] + 0.5;
-	}else if(key == 'e'){
-		cpos[1] = cpos[1] - 0.5;
+	switch(key){
+		case 'w':
+			keyw = true;
+			break;
+		case 's':
+			keys = true;
+			break;
+		case 'a':
+			keya = true;
+			break;
+		case 'd':
+			keyd = true;
+			break;
+		case 'q':
+			keyq = true;
+			break;
+		case 'e':
+			keye = true;
+			break;
 	}
-	glutPostRedisplay();
+}
+
+void keyboardup(unsigned char key, int xin, int yin){
+	switch(key){
+		case 'w':
+			keyw = false;
+			break;
+		case 's':
+			keys = false;
+			break;
+		case 'a':
+			keya = false;
+			break;
+		case 'd':
+			keyd = false;
+			break;
+		case 'q':
+			keyq = false;
+			break;
+		case 'e':
+			keye = false;
+			break;
+	}
 }
 
 void special(int key, int xin, int yin){
-	if(key == GLUT_KEY_UP){
-		if(cangle[0] < 90){
-			cangle[0] = cangle[0] + 2;
-		}
-	}else if(key == GLUT_KEY_DOWN){
-		if(cangle[0] > -90){
-			cangle[0] = cangle[0] - 2;
-		}
-	}else if(key == GLUT_KEY_LEFT){
-		cangle[1] = cangle[1] + 2;
-	}else if(key == GLUT_KEY_RIGHT){
-		cangle[1] = cangle[1] - 2;
+	switch(key){
+		case GLUT_KEY_UP:
+			keyup = true;
+			break;
+		case GLUT_KEY_DOWN:
+			keydown = true;
+			break;
+		case GLUT_KEY_LEFT:
+			keyleft = true;
+			break;
+		case GLUT_KEY_RIGHT:
+			keyright = true;
+			break;
 	}
-	if(cangle[1] < 0.0){
-		cangle[1] += 360.0;
-	}else if(cangle[1] >= 360.0){
-		cangle[1] -= 360.0;
+}
+
+void specialup(int key, int xin, int yin){
+	switch(key){
+		case GLUT_KEY_UP:
+			keyup = false;
+			break;
+		case GLUT_KEY_DOWN:
+			keydown = false;
+			break;
+		case GLUT_KEY_LEFT:
+			keyleft = false;
+			break;
+		case GLUT_KEY_RIGHT:
+			keyright = false;
+			break;
+	}
+}
+
+void update(int){
+	if(keyw == true){
+		cpos[0] = cpos[0] - (sin(cangle[0] * (pi / 180.0)) / 2);
+		cpos[2] = cpos[2] - (cos(cangle[0] * (pi / 180.0)) / 2);
+	}
+	if(keys == true){
+		cpos[0] = cpos[0] + (sin(cangle[0] * (pi / 180.0)) / 2);
+		cpos[2] = cpos[2] + (cos(cangle[0] * (pi / 180.0)) / 2);
+	}
+	if(keya == true){
+		cpos[0] = cpos[0] - (cos(cangle[0] * (pi / 180.0)) / 2);
+		cpos[2] = cpos[2] + (sin(cangle[0] * (pi / 180.0)) / 2);
+	}
+	if(keyd == true){
+		cpos[0] = cpos[0] + (cos(cangle[0] * (pi / 180.0)) / 2);
+		cpos[2] = cpos[2] - (sin(cangle[0] * (pi / 180.0)) / 2);
+	}
+	if(keyq == true){
+		cpos[1] = cpos[1] - 0.5;
+	}
+	if(keye == true){
+		cpos[1] = cpos[1] + 0.5;
+	}
+	if(keyup == true){
+		if(cangle[1] < 90){
+			cangle[1] = cangle[1] + 2;
+		}
+	}
+	if(keydown == true){
+		if(cangle[1] > -90){
+			cangle[1] = cangle[1] - 2;
+		}
+	}
+	if(keyleft == true){
+		cangle[0] = cangle[0] + 2;
+	}
+	if(keyright == true){
+		cangle[0] = cangle[0] - 2;
+	}
+	if(cangle[0] < 0.0){
+		cangle[0] += 360.0;
+	}else if(cangle[0] >= 360.0){
+		cangle[0] -= 360.0;
 	}
 	glutPostRedisplay();
+	glutTimerFunc(1000.0 / 120.0, update, 0);
+}
+
+void drawobject(int i){
+	for(int j = 0; j < (*objects[i].getmodel()).tril(); j++){
+		glBindTexture(GL_TEXTURE_2D, tex[(*(*objects[i].getmodel()).gettri(j)).gettexid()]);
+		glBegin(GL_TRIANGLES);
+		glTexCoord2f((*(*objects[i].getmodel()).gettri(j)).getuv(0, 0), (*(*objects[i].getmodel()).gettri(j)).getuv(0, 1));
+		glNormal3f((*(*(*objects[i].getmodel()).gettri(j)).gete1()).getnormx(), (*(*(*objects[i].getmodel()).gettri(j)).gete1()).getnormy(), (*(*(*objects[i].getmodel()).gettri(j)).gete1()).getnormz());
+		glVertex3f((*(*(*objects[i].getmodel()).gettri(j)).gete1()).getx(), (*(*(*objects[i].getmodel()).gettri(j)).gete1()).gety(), (*(*(*objects[i].getmodel()).gettri(j)).gete1()).getz());
+		glTexCoord2f((*(*objects[i].getmodel()).gettri(j)).getuv(1, 0), (*(*objects[i].getmodel()).gettri(j)).getuv(1, 1));
+		glNormal3f((*(*(*objects[i].getmodel()).gettri(j)).gete2()).getnormx(), (*(*(*objects[i].getmodel()).gettri(j)).gete2()).getnormy(), (*(*(*objects[i].getmodel()).gettri(j)).gete2()).getnormz());
+		glVertex3f((*(*(*objects[i].getmodel()).gettri(j)).gete2()).getx(), (*(*(*objects[i].getmodel()).gettri(j)).gete2()).gety(), (*(*(*objects[i].getmodel()).gettri(j)).gete2()).getz());
+		glTexCoord2f((*(*objects[i].getmodel()).gettri(j)).getuv(2, 0), (*(*objects[i].getmodel()).gettri(j)).getuv(2, 1));
+		glNormal3f((*(*(*objects[i].getmodel()).gettri(j)).gete3()).getnormx(), (*(*(*objects[i].getmodel()).gettri(j)).gete3()).getnormy(), (*(*(*objects[i].getmodel()).gettri(j)).gete3()).getnormz());
+		glVertex3f((*(*(*objects[i].getmodel()).gettri(j)).gete3()).getx(), (*(*(*objects[i].getmodel()).gettri(j)).gete3()).gety(), (*(*(*objects[i].getmodel()).gettri(j)).gete3()).getz());
+		glEnd();
+	}
 }
 
 void display(void){
@@ -309,23 +588,20 @@ void display(void){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glPushMatrix();
-	glRotatef(-cangle[0], 1, 0, 0);
-	glRotatef(-cangle[1], 0, 1, 0);
-	glTranslatef(cpos[0], cpos[1], cpos[2]);
-	glPushMatrix();
-	glTranslatef(0, 0, -5);
-	for(int i = 0; i < m.tril(); i++){
-		glBindTexture(GL_TEXTURE_2D, (*m.gettri(i)).gettexid());
-		glBegin(GL_TRIANGLES);
-		glTexCoord2f((*m.gettri(i)).getuv(0, 0), (*m.gettri(i)).getuv(0, 1));
-		glVertex3f((*(*m.gettri(i)).gete1()).getx(), (*(*m.gettri(i)).gete1()).gety(), (*(*m.gettri(i)).gete1()).getz());
-		glTexCoord2f((*m.gettri(i)).getuv(1, 0), (*m.gettri(i)).getuv(1, 1));
-		glVertex3f((*(*m.gettri(i)).gete2()).getx(), (*(*m.gettri(i)).gete2()).gety(), (*(*m.gettri(i)).gete2()).getz());
-		glTexCoord2f((*m.gettri(i)).getuv(2, 0), (*m.gettri(i)).getuv(2, 1));
-		glVertex3f((*(*m.gettri(i)).gete3()).getx(), (*(*m.gettri(i)).gete3()).gety(), (*(*m.gettri(i)).gete3()).getz());
-		glEnd();
+	glRotatef(-cangle[1], 1, 0, 0);
+	glRotatef(-cangle[0], 0, 1, 0);
+	glTranslatef(-cpos[0], -cpos[1], -cpos[2]);
+	glLightfv(GL_LIGHT0, GL_POSITION, l1pos);
+	for(int i = 0; i < objects.size(); i++){
+		glPushMatrix();
+		glTranslatef(objects[i].getposx(), objects[i].getposy(), objects[i].getposz());
+		glRotatef(objects[i].getangley(), 0.0, 1.0, 0.0);
+		glRotatef(objects[i].getanglex(), 1.0, 0.0, 0.0);
+		glRotatef(objects[i].getanglez(), 0.0, 0.0, 1.0);
+		glScalef(objects[i].getscalex(), objects[i].getscaley(), objects[i].getscalez());
+		drawobject(i);
+		glPopMatrix();
 	}
-	glPopMatrix();
 	glPopMatrix();
 	glutSwapBuffers();
 }
@@ -335,10 +611,14 @@ int main(int argc, char** argv){
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(400, 400);
 	glutInitWindowPosition(50, 50);
-	winid = glutCreateWindow("");
+	winid = glutCreateWindow("h");
 	glutReshapeFunc(reshape);
+	glutIgnoreKeyRepeat(1);
 	glutKeyboardFunc(keyboard);
+	glutKeyboardUpFunc(keyboardup);
 	glutSpecialFunc(special);
+	glutSpecialUpFunc(specialup);
+	glutTimerFunc(1000.0 / 120.0, update, 0);
 	glutDisplayFunc(display);
 	init();
 	glutMainLoop();
