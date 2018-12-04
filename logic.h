@@ -38,9 +38,9 @@ int DOUBLE_POINTS;
 
 //ball values
 float x_vel;
-float y_vel;
+float z_vel;
 float x_pos;
-float y_pos;
+float z_pos;
 
 //Display values
 int WINDOW_HEIGHT = 600;
@@ -50,9 +50,9 @@ float WW_COMP = WINDOW_WIDTH * 3/4; //The width value for comparisons
 float FOV = 30;     //Field of view for the camera
 
 //Globals
-float throwCamPos[] = {0.0f, 2.0f, 1.0f};	//where the camera is when throwing
-float pinCamPos[] = {0.0f, -8.5f, 1.5f};    //where the camera is when hitting pins
-float ballCamPos[] = {0.8f, 1.8f, 0.8f};    //follow postion wrt ball
+float throwCamPos[] = {0.0f, 1.0f, 2.0f};	//where the camera is when throwing
+float pinCamPos[] = {0.0f, 1.5f, -8.5f};    //where the camera is when hitting pins
+float ballCamPos[] = {0.8f, 0.8f, 1.8f};    //follow postion wrt ball
 int currentX;       //Cursor's X position relative to the window
 int currentY;       //Cursor's Y position relative to the window
 Point2D startPoint; //Start point of speed calculation
@@ -80,23 +80,23 @@ void drawPowerLine() {
     updateSpeed();
 
     Point2D p;
-    if (startPoint.y >= endPoint.y) {
+    if (startPoint.z >= endPoint.z) {
         p.x = (startPoint.x - endPoint.x) / FOV;    //X value divided by FOV to allow for more precise angles
     } else {
         p.x = (endPoint.x - startPoint.x) / FOV;
     }
-    p.y = speed;
+    p.z = speed;
 
     x_vel = p.x/(2*FOV);
-    y_vel = -p.y/5;
+    z_vel = -p.z/5;
 
-    printf("p.x: %f, p.y: %f.\n", p.x, p.y);
+    printf("p.x: %f, p.z: %f.\n", p.x, p.z);
 
     glBegin(GL_LINES);
         glColor3f(1, 1, 1);
         glLineWidth(1);
         glVertex3f(0, -0.5, 1);
-        glVertex3f(p.x,-0.5-p.y, 1); 
+        glVertex3f(p.x,-0.5-p.z, 1); 
     glEnd();
 }
 
@@ -104,7 +104,7 @@ void throw_ball(){
     AIMING = false;
     HOLDING =  false;
     ROLLING = true;
-    //y_vel = -0.04;
+    //z_vel = -0.04;
 }
 
 void strike_pins(){
@@ -244,15 +244,15 @@ void displayl(void){
 	glLoadIdentity();*/
 
     if (WAITING){
-        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[1] + y_pos + 2, 0.0, -9.5f, 0.0, 0,0,1);
+        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1], throwCamPos[2] + z_pos + 2, 0.0, 0.0, -9.5, 0,1,0);
 	}else if (AIMING) {
-        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[1] + y_pos, 0.0, -9.5f, 0.0, 0,0,1);
+        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1], throwCamPos[2] + z_pos, 0.0, 0.0, -9.5, 0,1,0);
         drawPowerLine();
     }
-    else if ((ROLLING && y_pos < -7.5) || STRIKING){
-        gluLookAt(pinCamPos[0], pinCamPos[2], pinCamPos[1], 0.0, -9.5f, 0.0, 0,0,1);
+    else if ((ROLLING && z_pos < -7.5) || STRIKING){
+        gluLookAt(pinCamPos[0], pinCamPos[2], pinCamPos[1], 0.0, 0.0, -9.5, 0,1,0);
     }else if (ROLLING){
-        gluLookAt(ballCamPos[0] + x_pos, ballCamPos[2], ballCamPos[1] + y_pos, x_pos, y_pos, 0.0, 0,0,1);
+        gluLookAt(ballCamPos[0] + x_pos, ballCamPos[2], ballCamPos[1] + z_pos, x_pos, 0.0, z_pos, 0,1,0);
 	}
 }
     /*glPushMatrix();
@@ -314,7 +314,7 @@ void displayl(void){
 
     glPushMatrix();
         //bowling ball
-        glTranslatef(x_pos, -0.5 + y_pos, 0.1);
+        glTranslatef(x_pos, -0.5 + z_pos, 0.1);
         glColor3f(0.1, 0.1, 0.1);
         glutSolidSphere(0.1, 10, 10);
 	glPopMatrix();*/
@@ -322,15 +322,15 @@ void updatel(){
 
     if (!(WAITING || AIMING)){
         x_pos+=x_vel;
-        y_pos+=y_vel;
+        z_pos+=z_vel;
     }
-    if(y_pos <= -9.0) {
+    if(z_pos <= -9.0) {
         strike_pins();
     }
-    if(y_pos <= -10.0) {
+    if(z_pos <= -10.0) {
         next_turn();
-        y_vel = 0;
-        y_pos = 0;
+        z_vel = 0;
+        z_pos = 0;
     }
 
 	//glutSwapBuffers();
@@ -366,9 +366,9 @@ void mousel(int btn, int state, int x, int y) {
 
             if (state == GLUT_DOWN) {   //Left Button held
                 startPoint.x = x;
-                startPoint.y = relativeY;
+                startPoint.z = relativeY;
                 endPoint.x = x;
-                endPoint.y = relativeY;
+                endPoint.z = relativeY;
                 HOLDING = true;
             }
         }
@@ -385,7 +385,7 @@ void motionl(int x, int y) {
 
     if (AIMING) { //if the current state is that of aiming the ball
         endPoint.x = x;
-        endPoint.y = relativeY;
+        endPoint.z = relativeY;
     }
 }
 
@@ -421,8 +421,8 @@ void initialSetupLogic() {
     for (int i = 0; i < 10; i++){ PINS[i] = true; }
     PINS_LEFT = 10;
     CURRENT_PINS_HIT = 0;
-    startPoint.x = 0; startPoint.y = 0;
-    endPoint.x = 0; endPoint.y = 0;
+    startPoint.x = 0; startPoint.z = 0;
+    endPoint.x = 0; endPoint.z = 0;
 }
 
 
