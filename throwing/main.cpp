@@ -187,6 +187,9 @@ void next_turn(){
         else {
             DOUBLE_POINTS = 1;
             cout << "SPARE!\n";
+            if (FRAME_COUNT == 10 && ROLL_COUNT == 2){
+                for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            }
         }
     }
     if (FRAME_COUNT == 11) {
@@ -423,6 +426,8 @@ void initialSetup() {
     for (int i = 0; i < 10; i++){ PINS[i] = true; }
     PINS_LEFT = 10;
     CURRENT_PINS_HIT = 0;
+    x_pos = 0;
+    y_pos = 0;
     startPoint.x = 0; startPoint.y = 0;
     endPoint.x = 0; endPoint.y = 0;
 }
