@@ -1,4 +1,4 @@
-LDFLAGS = -lGL -lGLU -lglut
+LDFLAGS = -lopengl32 -lglu32 -lfreeglut
 CFLAGS=-g -Wall -std=c++11
 CC=g++
 EXEEXT=
