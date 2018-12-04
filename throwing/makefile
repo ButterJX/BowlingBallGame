@@ -19,12 +19,12 @@ else
 	endif
 endif
 
-PROGRAM_NAME= throwing
+PROGRAM_NAME= 60fpsbowling
 
 run: $(PROGRAM_NAME)
 	./$(PROGRAM_NAME)$(EXEEXT)
 
-$(PROGRAM_NAME): throwing.o 
+$(PROGRAM_NAME): main.o 
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 clean:
