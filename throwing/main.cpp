@@ -57,7 +57,7 @@ int currentX;       //Cursor's X position relative to the window
 int currentY;       //Cursor's Y position relative to the window
 Point2D startPoint; //Start point of speed calculation
 Point2D endPoint;   //End point of speed calculation
-float MAX_SPEED = 100;
+float MAX_SPEED = 50;
 float MIN_SPEED = 1;
 float speed;
 
@@ -85,18 +85,18 @@ void drawPowerLine() {
     } else {
         p.x = (endPoint.x - startPoint.x) / FOV;
     }
-    p.y = speed;
+    p.y = speed/MAX_SPEED; //Capping at 1
 
-    x_vel = p.x/(2*FOV);
-    y_vel = -p.y/5;
+    x_vel = -p.x/(2*FOV); //X is inverted in this angle
+    y_vel = -p.y;
 
-    printf("p.x: %f, p.y: %f.\n", p.x, p.y);
+    printf("p.x: %f, p.y: %f, speed: %f.\n", p.x, p.y, speed);
 
     glBegin(GL_LINES);
         glColor3f(1, 1, 1);
         glLineWidth(1);
-        glVertex3f(0, -0.5, 1);
-        glVertex3f(p.x,-0.5-p.y, 1); 
+        glVertex3f(0, -0.5, 1.5);
+        glVertex3f(x_vel,-0.5-y_vel, 1.5); 
     glEnd();
 }
 
@@ -248,7 +248,7 @@ void display(void)
         gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1] + y_pos + 2, throwCamPos[2], 0.0, -9.5f, 0.0, 0,0,1);
 	else if (AIMING) {
         gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1] + y_pos, throwCamPos[2], 0.0, -9.5f, 0.0, 0,0,1);
-        drawPowerLine();
+        if (HOLDING) {drawPowerLine();}
     }
     else if ((ROLLING && y_pos < -7.5) || STRIKING)
         gluLookAt(pinCamPos[0], pinCamPos[1], pinCamPos[2], 0.0, -9.5f, 0.0, 0,0,1);
@@ -326,10 +326,12 @@ void display(void)
     if(y_pos <= -9.0) {
         strike_pins();
     }
-    if(y_pos <= -10.0) {
+    if((y_pos <= -10.0) || (x_pos >= 0.6) || (x_pos <= -0.6)) {
         next_turn();
         y_vel = 0;
         y_pos = 0;
+        x_vel = 0;
+        x_pos = 0;
     }
 
 	glutSwapBuffers();
@@ -361,6 +363,7 @@ void mouse(int btn, int state, int x, int y) {
 
             if (state == GLUT_UP) {     //Left Button released
                 throw_ball();
+                HOLDING = false;
             }
 
             if (state == GLUT_DOWN) {   //Left Button held
