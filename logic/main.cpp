@@ -283,6 +283,9 @@ void next_turn(){
         else {
             DOUBLE_POINTS = 1;
             cout << "SPARE!\n";
+            if (FRAME_COUNT == 10 && ROLL_COUNT == 2){
+                for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            }
         }
     }
     if (FRAME_COUNT == 11) {
@@ -492,6 +495,8 @@ int main(int argc, char** argv)
     for (int i = 0; i < 10; i++){ PINS[i] = true; }
     PINS_LEFT = 10;
     CURRENT_PINS_HIT = 0;
+    x_pos = 0;
+    y_pos = 0;
     cout << "Welcome to Ultra Optimized 60fps Bowling Simulator!\n";
     cout << "Roll: 1 Frame: 1 Score: 0\n";
 
