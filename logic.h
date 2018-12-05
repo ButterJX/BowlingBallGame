@@ -394,7 +394,7 @@ void passivel(int x, int y){
 	//printf("mousePassive coords: %i,%i\n", x, y);
 }
 
-void collision(vector<float[4]> data){
+void collision(vector<float[4]> *data){
     //assumes pin radius of 0.05 and ball radius of 0.1
     //assumes ball is last object in vector
     float pweight = 0.5;
@@ -403,31 +403,31 @@ void collision(vector<float[4]> data){
         for (int j = 1; j < 10; j++){
             //bowling ball vs pins
             if (i == 10){
-                if ( (sqrt ( pow(data[i][0] - data[j][0], 2) + pow(data[i][1] - data[j][1],2) ) < 0.15)) {
+                if ( (sqrt ( pow((*data)[i][0] - (*data)[j][0], 2) + pow((*data)[i][1] - (*data)[j][1],2) ) < 0.15)) {
                     if (!STRIKING) { STRIKING = true; ROLLING = false; }
                     //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    float ball_x = ( bweight*data[i][2] + 2*pweight*data[j][2] - pweight*data[i][2] ) / (pweight + bweight);
-                    float ball_y = ( bweight*data[i][3] + 2*pweight*data[j][3] - pweight*data[i][3] ) / (pweight + bweight);
-                    float pin_x = ( pweight*data[j][2] + 2*bweight*data[i][2] - bweight*data[j][2] ) / (pweight + bweight);
-                    float pin_y = ( pweight*data[j][3] + 2*bweight*data[i][3] - bweight*data[j][3] ) / (pweight + bweight);
-                    data[i][2] = ball_x;
-                    data[i][3] = ball_y;
-                    data[j][2] = pin_x;
-                    data[j][3] = pin_y;
+                    float ball_x = ( bweight*(*data)[i][2] + 2*pweight*(*data)[j][2] - pweight*(*data)[i][2] ) / (pweight + bweight);
+                    float ball_y = ( bweight*(*data)[i][3] + 2*pweight*(*data)[j][3] - pweight*(*data)[i][3] ) / (pweight + bweight);
+                    float pin_x = ( pweight*(*data)[j][2] + 2*bweight*(*data)[i][2] - bweight*(*data)[j][2] ) / (pweight + bweight);
+                    float pin_y = ( pweight*(*data)[j][3] + 2*bweight*(*data)[i][3] - bweight*(*data)[j][3] ) / (pweight + bweight);
+                    (*data)[i][2] = ball_x;
+                    (*data)[i][3] = ball_y;
+                    (*data)[j][2] = pin_x;
+                    (*data)[j][3] = pin_y;
                 }
             }
             else if (i < j) {
-                if ( (sqrt ( pow(data[i][0] - data[j][0], 2) + pow(data[i][1] - data[j][1] , 2) ) < 0.1)) {
+                if ( (sqrt ( pow((*data)[i][0] - (*data)[j][0], 2) + pow((*data)[i][1] - (*data)[j][1] , 2) ) < 0.1)) {
                     if (!STRIKING) { STRIKING = true; ROLLING = false; }
                     //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    float pin1_x = ( pweight*data[i][2] + 2*pweight*data[j][2] - pweight*data[i][2] ) / (pweight + pweight);
-                    float pin1_y = ( pweight*data[i][3] + 2*pweight*data[j][3] - pweight*data[i][3] ) / (pweight + pweight);
-                    float pin2_x = ( pweight*data[j][2] + 2*pweight*data[i][2] - pweight*data[j][2] ) / (pweight + pweight);
-                    float pin2_y = ( pweight*data[j][3] + 2*pweight*data[i][3] - pweight*data[j][3] ) / (pweight + pweight);
-                    data[i][2] = pin1_x;
-                    data[i][3] = pin1_y;
-                    data[j][2] = pin2_x;
-                    data[j][3] = pin2_y; 
+                    float pin1_x = ( pweight*(*data)[i][2] + 2*pweight*(*data)[j][2] - pweight*(*data)[i][2] ) / (pweight + pweight);
+                    float pin1_y = ( pweight*(*data)[i][3] + 2*pweight*(*data)[j][3] - pweight*(*data)[i][3] ) / (pweight + pweight);
+                    float pin2_x = ( pweight*(*data)[j][2] + 2*pweight*(*data)[i][2] - pweight*(*data)[j][2] ) / (pweight + pweight);
+                    float pin2_y = ( pweight*(*data)[j][3] + 2*pweight*(*data)[i][3] - pweight*(*data)[j][3] ) / (pweight + pweight);
+                    (*data)[i][2] = pin1_x;
+                    (*data)[i][3] = pin1_y;
+                    (*data)[j][2] = pin2_x;
+                    (*data)[j][3] = pin2_y; 
                 }
             }
         }
