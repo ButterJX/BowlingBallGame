@@ -1,12 +1,12 @@
-LDFLAGS = -lopengl32 -lglu32 -lfreeglut
+LDFLAGS = -lGL -lGLU -lglut
 CFLAGS=-g -Wall -std=c++11
 CC=g++
 EXEEXT=
 RM=rm
-PROGRAM_NAME = unfinished
+PROGRAM_NAME = main
 run: $(PROGRAM_NAME)
 	./$(PROGRAM_NAME)$(EXEEXT)
-$(PROGRAM_NAME): unfinished.o
+$(PROGRAM_NAME): main.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 clean:
 	$(RM) *.o $(PROGRAM_NAME)$(EXEEXT)

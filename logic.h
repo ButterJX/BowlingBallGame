@@ -4,8 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
-#include "point2d.h"
-#include "math.h"
+#include <math.h>
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
@@ -19,15 +18,12 @@
 
 using namespace std;
 
-//Program state flags
-bool AIMING;    //Whether the player is aiming the throw
-bool ROLLING;   //Whether the ball is currently travelling down lane
-bool STRIKING;  //Whether the pins are being struck
-bool WAITING;   //Stepped away from the lane, able to choose ball texture
-bool HOLDING;   //Whether the user is holding down left click
+//program state flags
+bool AIMING;
+bool ROLLING;
+bool STRIKING;
 
 //pin state values
-bool PINS[10];
 int PINS_LEFT;
 int CURRENT_PINS_HIT;
 
@@ -39,100 +35,62 @@ int DOUBLE_POINTS;
 
 //ball values
 float x_vel;
-float z_vel;
+float y_vel;
 float x_pos;
-float z_pos;
-
-//Display values
-int WINDOW_HEIGHT = 600;
-int WINDOW_WIDTH = 800;
-float WH_COMP = WINDOW_HEIGHT * 3/4; //The height value for comparisons
-float WW_COMP = WINDOW_WIDTH * 3/4; //The width value for comparisons
-float FOV = 30;     //Field of view for the camera
+float y_pos;
+float bweight = 4.0;
+float pweight = 0.5;
 
 //Globals
-float throwCamPos[] = {0.0f, 1.0f, 2.0f};	//where the camera is when throwing
-float pinCamPos[] = {0.0f, 1.5f, -8.5f};    //where the camera is when hitting pins
-float ballCamPos[] = {0.8f, 0.8f, 1.8f};    //follow postion wrt ball
-int currentX;       //Cursor's X position relative to the window
-int currentY;       //Cursor's Y position relative to the window
-Point2D startPoint; //Start point of speed calculation
-Point2D endPoint;   //End point of speed calculation
-float MAX_SPEED = 100;
-float MIN_SPEED = 1;
-float speed;
+float throwCamPos[] = {0.0f, 4.0f, 1.0f};	//where the camera is when throwing
+float pinCamPos[] = {0.0f, -8.5f, 1.5f};    //where the camera is when hitting pins
+float ballCamPos[] = {0.8f, 1.8f, 0.8f};    //follow postion wrt ball
 
-//Updates speed given the current start and end points
-void updateSpeed() {
-    float d = distance(startPoint, endPoint);
-    if (d > WH_COMP) {
-        speed = MAX_SPEED;
-    } else if (d < (WH_COMP/10) ) {
-        speed = MIN_SPEED;
-    } else {
-        speed = MAX_SPEED * (d / WH_COMP);
-    }
-    //printf("d: %f, wh_comp: %f\n", d, WH_COMP);
+float original_positions[] = {
+    0.3,    -9.5,
+    0.1,    -9.5,
+    -0.1,   -9.5,
+    -0.3,   -9.5,
+    0.2,    -9.3268,
+    0.0,    -9.3268,
+    -0.2,   -9.3268,
+    0.1,    -9.1536,
+    -0.1,   -9.1536,
+    0.0,    -8.9804
+};
 
-}
+class Pin{
+    public:
+    float original_x, original_y;
+    float x, y;
+    float vel_x, vel_y;
+    bool present;
+};
 
-//Displays the "Power Bar" to the user, also computes speed (will be split functions at a later point)
-void drawPowerLine() {
-    updateSpeed();
-
-    Point2D p;
-    if (startPoint.y >= endPoint.y) {
-        p.x = (startPoint.x - endPoint.x) / FOV;    //X value divided by FOV to allow for more precise angles
-    } else {
-        p.x = (endPoint.x - startPoint.x) / FOV;
-    }
-    p.y = speed;
-
-    x_vel = p.x/(2*FOV);
-    z_vel = -p.y/5;
-
-    //printf("p.x: %f, p.z: %f.\n", p.x, p.z);
-
-    glBegin(GL_LINES);
-        glColor3f(1, 1, 1);
-        glLineWidth(1);
-        glVertex3f(0, -0.5, 1);
-        glVertex3f(p.x,-0.5-p.y, 1); 
-    glEnd();
-}
+Pin PINS[10];
 
 void throw_ball(){
     AIMING = false;
-    HOLDING =  false;
     ROLLING = true;
-    //z_vel = -0.04;
-}
-
-void strike_pins(){
-    if (!STRIKING){
-        ROLLING = false;
-        STRIKING = true;
-        PINS_LEFT = 0;
-        int random = rand();
-        //randomly hits or misses pins. in reality, we will want to iterate through each pin to check whether it has changed position or not
-        for (int i = 0; i < 10; i++){
-           if (PINS[i]){
-               random = rand();
-               PINS[i] = random%2;
-               if (!PINS[i]){
-                   CURRENT_PINS_HIT++;
-                }
-            }
-            if (PINS[i]){
-                PINS_LEFT++;
-            }
-        }
-    }
+    y_vel = 0.06 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.1;
+    x_vel = 0.002 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.001;
+    printf("%f, %f\n",x_vel,y_vel);
 }
 
 void next_turn(){
     STRIKING = false;
+    ROLLING = false;
     AIMING = true;
+    x_pos = y_pos = x_vel = y_vel = 0;
+
+
+    for (int i = 0; i < 10; i++){
+        if (PINS[i].present && (PINS[i].x != PINS[i].original_x || PINS[i].y != PINS[i].original_y)){
+            PINS[i].present = false;
+            CURRENT_PINS_HIT++;
+        }
+    }
+    PINS_LEFT -= CURRENT_PINS_HIT;
     
     //for determining the next frame and roll
     if (FRAME_COUNT < 10){
@@ -143,8 +101,15 @@ void next_turn(){
         else{
             cout << "You hit " +  to_string(CURRENT_PINS_HIT) +  " pins and " + to_string(10 - PINS_LEFT) + " in total this frame.\n";
             ROLL_COUNT = 0;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
             FRAME_COUNT++;
+            PINS_LEFT = 10;
         }
     }
     else {
@@ -155,8 +120,15 @@ void next_turn(){
         else{
             cout << "You hit " +  to_string(CURRENT_PINS_HIT) +  " pins and " + to_string(10 - PINS_LEFT) + " in total this frame.\n";
             ROLL_COUNT = 0;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
             FRAME_COUNT++;
+            PINS_LEFT = 10;
         }
     }
     
@@ -183,11 +155,28 @@ void next_turn(){
             DOUBLE_POINTS = 2;
             ROLL_COUNT = 0;
             FRAME_COUNT++;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
+            PINS_LEFT = 10;
         }
         else {
             DOUBLE_POINTS = 1;
             cout << "SPARE!\n";
+            if (FRAME_COUNT == 10 && ROLL_COUNT == 2){
+                for (int i = 0; i < 10; i++){ 
+                    PINS[i].present = true; 
+                    PINS[i].x = PINS[i].original_x;
+                    PINS[i].y = PINS[i].original_y;
+                    PINS[i].vel_x = 0;
+                    PINS[i].vel_y = 0;
+                }
+            }
+            PINS_LEFT = 10;
         }
     }
     if (FRAME_COUNT == 11) {
@@ -201,6 +190,77 @@ void next_turn(){
     }
 }
 
+void checkForEnd(){
+    bool END_TURN = true;
+    for (int i = 0; i < 10; i++){
+        if (PINS[i].y < -10.0) PINS[i].present = false; 
+        if (PINS[i].vel_x > 0.000005 || PINS[i].vel_x < -0.000005 || PINS[i].vel_y > 0.000005 || PINS[i].vel_y < -0.000005 || !PINS[i].present){
+            printf("pin %i still moving\n", i);
+            END_TURN = false;
+            break;
+        }
+    }
+    if (END_TURN) next_turn();
+}
+
+void collision(){
+    
+    for (int i = 0; i < 11; i++){
+        for (int j = 1; j < 10; j++){
+            if (i == 10){
+                //printf("%f\n",sqrt ( pow(x_pos - PINS[j].x, 2) + pow(y_pos - PINS[j].y,2) ));
+                if ( (sqrt ( pow(x_pos - PINS[j].x, 2) + pow(y_pos - PINS[j].y,2) ) < 0.15) &&
+                    PINS[j].present) {
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    //( bweight*x_vel + 2*pweight*PINS[j].vel_x - pweight*x_vel ) / (pweight + bweight);
+                    float vel_mag_ball = sqrt( pow(x_vel,2) + pow(y_vel,2) );
+                    float vel_mag_pin =  sqrt( pow(PINS[j].vel_x,2) + pow(PINS[j].vel_x,2) );
+                    float theta_ball = atan2(y_vel, x_vel);
+                    float theta_pin = atan2(PINS[j].vel_y, PINS[j].vel_x);
+                    float phi = atan2( PINS[j].y - y_pos, PINS[j].x -x_pos ); 
+                    float ball_x =  ((vel_mag_ball * cos(theta_ball - phi) * (bweight - pweight) + 2 * pweight * vel_mag_pin * cos( theta_pin - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_ball * sin(theta_ball - phi) * sin(phi);
+                    float ball_y =  ((vel_mag_ball * cos(theta_ball - phi) * (bweight - pweight) + 2 * pweight * vel_mag_pin * cos( theta_pin - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_ball * sin(theta_ball - phi) * cos(phi);
+                    float pin_x =   ((vel_mag_pin * cos(theta_pin - phi) * (pweight - bweight) + 2 * bweight * vel_mag_ball * cos( theta_ball - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_pin * sin(theta_pin - phi) * sin(phi);
+                    float pin_y =   ((vel_mag_pin * cos(theta_pin - phi) * (pweight - bweight) + 2 * bweight * vel_mag_ball * cos( theta_ball - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_pin * sin(theta_pin - phi) * cos(phi);
+                    x_vel = ball_x;
+                    y_vel = ball_y;
+                    PINS[j].vel_x = pin_x;
+                    PINS[j].vel_y = pin_y;
+                }
+            }
+            else if (i < j) {
+                if ( (sqrt ( pow(PINS[i].x - PINS[j].x, 2) + pow(PINS[i].y - PINS[j].y , 2) ) < 0.1) &&
+                    PINS[i].present && PINS[j].present){
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    float vel_mag_pin1 =  sqrt( pow(PINS[i].vel_x,2) + pow(PINS[i].vel_x,2) );
+                    float vel_mag_pin2 =  sqrt( pow(PINS[j].vel_x,2) + pow(PINS[j].vel_x,2) );
+                    float theta_pin1 = atan2(PINS[i].vel_y, PINS[i].vel_x);
+                    float theta_pin2 = atan2(PINS[j].vel_y, PINS[j].vel_x);
+                    float phi = atan2( PINS[j].y - y_pos, PINS[j].x -x_pos ); 
+                    float pin1_x =  ((vel_mag_pin1 * cos(theta_pin1 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin2 * cos( theta_pin2 - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_pin1 * sin(theta_pin1 - phi) * sin(phi);
+                    float pin1_y =  ((vel_mag_pin1 * cos(theta_pin1 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin2 * cos( theta_pin2 - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_pin1 * sin(theta_pin1 - phi) * cos(phi);
+                    float pin2_x =  ((vel_mag_pin2 * cos(theta_pin2 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin1 * cos( theta_pin1 - phi )) * cos(phi) /
+                                    (pweight + pweight)) + vel_mag_pin2 * sin(theta_pin2 - phi) * sin(phi);
+                    float pin2_y =  ((vel_mag_pin2 * cos(theta_pin2 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin1 * cos( theta_pin1 - phi )) * sin(phi) /
+                                    (pweight + pweight)) + vel_mag_pin2 * sin(theta_pin2 - phi) * cos(phi);
+                    PINS[i].vel_x = pin1_x;
+                    PINS[i].vel_y = pin1_y;
+                    PINS[j].vel_x = pin2_x;
+                    PINS[j].vel_y = pin2_y;
+                }
+            }
+        }
+    }
+}
+
 //OpenGL functions
 void keyboardl(unsigned char key, int xIn, int yIn)
 {
@@ -210,16 +270,8 @@ void keyboardl(unsigned char key, int xIn, int yIn)
 		case 't':
             if (AIMING) throw_ball();
             break;
-        case 'q':
-        case 27:    //escape key
-            exit(0);
-            break;
-        case 32:    //Spacebar
-            if (!(STRIKING || HOLDING || ROLLING)) {
-                AIMING = !AIMING;
-                WAITING = !WAITING;
-            }
-            glutPostRedisplay();
+        case 'e':
+            if (STRIKING) next_turn();
             break;
 	}
 }
@@ -231,29 +283,25 @@ void keyboardl(unsigned char key, int xIn, int yIn)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	//gluPerspective(45, 1, 1, 100);
-    gluPerspective(FOV, WINDOW_WIDTH/WINDOW_HEIGHT, 0.001f, 1000);
+	gluPerspective(45, 1, 1, 100);
 }*/
 
 /* display function - GLUT display callback function
  * clears the screen, sets the camera position, draws the ground plane and movable box
  */
-void displayl(void){
+void displayl(void)
+{
 	/*glClear(GL_COLOR_BUFFER_BIT);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();*/
 
-    if (WAITING){
-        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1], throwCamPos[2] + z_pos + 2, 0.0, 0.0, -9.5, 0,1,0);
-	}else if (AIMING) {
-        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[1], throwCamPos[2] + z_pos, 0.0, 0.0, -9.5, 0,1,0);
-        drawPowerLine();
-    }
-    else if ((ROLLING && z_pos < -7.5) || STRIKING){
+	if (AIMING) {
+        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[2] + y_pos, 0.0, 0.0, -9.5, 0,1,0);
+    }else if ((ROLLING && y_pos < -7.5) || STRIKING){
         gluLookAt(pinCamPos[0], pinCamPos[2], pinCamPos[1], 0.0, 0.0, -9.5, 0,1,0);
     }else if (ROLLING){
-        gluLookAt(ballCamPos[0] + x_pos, ballCamPos[2], ballCamPos[1] + z_pos, x_pos, 0.0, z_pos, 0,1,0);
+        gluLookAt(ballCamPos[0] + x_pos, ballCamPos[2], ballCamPos[1] + y_pos, x_pos, 0.0, y_pos, 0,1,0);
 	}
 }
     /*glPushMatrix();
@@ -275,63 +323,51 @@ void displayl(void){
 
     glPushMatrix();
         //pins
-        glTranslatef(0.3, -9.5, 0.05);
+        glTranslatef(0, 0, 0.05);
         glColor3f(1.0f, 1.0f, 1.0f);
-        glPushMatrix();
-            //back row
-            if (PINS[0]) glutSolidCone(0.075, 0.5, 10, 10);
-            
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[1]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[2]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[3]) glutSolidCone(0.075, 0.5, 10, 10);
-            
-            //3rd row
-            glTranslatef(0.1, 0.1732, 0.0);
-            if (PINS[4]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(0.6/3.0, 0, 0);
-            if (PINS[5]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(0.6/3.0, 0, 0);
-            if (PINS[6]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            //2nd row
-            glTranslatef(-0.1, 0.1732, 0.0);
-            if (PINS[7]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[8]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            //1st row
-            glTranslatef(0.1, 0.1732, 0.0);
-            if (PINS[9]) glutSolidCone(0.075, 0.5, 10, 10);
-        glPopMatrix();
+        for (int i = 0; i < 10; i++){    
+            glPushMatrix();
+                if (PINS[i].present){ 
+                    glTranslatef(PINS[i].x, PINS[i].y, 0);
+                    glutSolidCone(0.05, 0.4, 10, 10);
+                }
+            glPopMatrix();
+        }
     glPopMatrix();
 
     glPushMatrix();
         //bowling ball
-        glTranslatef(x_pos, -0.5 + z_pos, 0.1);
+        glTranslatef(x_pos, -0.5 + y_pos, 0.1);
         glColor3f(0.1, 0.1, 0.1);
         glutSolidSphere(0.1, 10, 10);
 	glPopMatrix();*/
 void updatel(){
 
-    if (!(WAITING || AIMING)){
-        x_pos+=x_vel;
-        z_pos+=z_vel;
+    x_pos+=x_vel;
+    y_pos+=y_vel;
+
+    for (int i = 0; i < 10; i++){
+        PINS[i].x += PINS[i].vel_x;
+        PINS[i].y += PINS[i].vel_y;
+        if (PINS[i].vel_x > 0.0000005) PINS[i].vel_x -= 0.0000005;
+        if (PINS[i].vel_y > 0.0000005) PINS[i].vel_y -= 0.0000005;
+        if (PINS[i].vel_x < -0.0000005) PINS[i].vel_x += 0.0000005;
+        if (PINS[i].vel_y < -0.0000005) PINS[i].vel_y += 0.0000005;
     }
-    if(z_pos <= -9.0) {
-        strike_pins();
-    }
-    if(z_pos <= -10.0) {
-        next_turn();
-        z_vel = 0;
-        z_pos = 0;
+
+    if (!AIMING) collision();
+
+    if (STRIKING)
+        checkForEnd();
+    
+    if(y_pos <= -10.0) {
+        y_vel = 0;
+        x_vel = 0;
+        x_pos = 0;
+        y_pos = 0;
+        if (!STRIKING && !AIMING){
+            next_turn();
+        }
     }
 
 	//glutSwapBuffers();
@@ -349,89 +385,19 @@ void speciall(int key, int x, int y){
 	}
 }
 
-//Recognizing mouse interaction
-void mousel(int btn, int state, int x, int y) {
-    //Converting cursor position to proper coordinates
-    int relativeY = WINDOW_HEIGHT - y;
-    currentX = x;
-    currentY = relativeY;
-    //printf("Mouse coords: %i,%i\n", x, relativeY);
-
-    if (btn == GLUT_LEFT_BUTTON) {
-        printf("Left Mouse Button\n");
-        if (AIMING) {
-
-            if (state == GLUT_UP) {     //Left Button released
-                throw_ball();
-            }
-
-            if (state == GLUT_DOWN) {   //Left Button held
-                startPoint.x = x;
-                startPoint.y = relativeY;
-                endPoint.x = x;
-                endPoint.y = relativeY;
-                HOLDING = true;
-            }
-        }
+void mousel(int btn, int state, int x, int y){
+	if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        //mouse controls if any
+        cout << "mouse memes\n";
     }
-
 }
 
-//Motion function for mouse
-void motionl(int x, int y) {
-    //Converting cursor position to proper coordinates
-    int relativeY = WINDOW_HEIGHT - y;
-    currentX = x;
-    currentY = relativeY;
-
-    if (AIMING) { //if the current state is that of aiming the ball
-        endPoint.x = x;
-        endPoint.y = relativeY;
-    }
+void motionl(int x, int y){
+	//printf("mouseMotion coords: %i,%i\n", x, y);
 }
 
 void passivel(int x, int y){
 	//printf("mousePassive coords: %i,%i\n", x, y);
-}
-
-void collision(vector<float[4]> *data){
-    //assumes pin radius of 0.05 and ball radius of 0.1
-    //assumes ball is last object in vector
-    float pweight = 0.5;
-    float bweight = 2.0;
-    for (int i = 0; i < 11; i++){
-        for (int j = 1; j < 10; j++){
-            //bowling ball vs pins
-            if (i == 10){
-                if ( (sqrt ( pow((*data)[i][0] - (*data)[j][0], 2) + pow((*data)[i][1] - (*data)[j][1],2) ) < 0.15)) {
-                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
-                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    float ball_x = ( bweight*(*data)[i][2] + 2*pweight*(*data)[j][2] - pweight*(*data)[i][2] ) / (pweight + bweight);
-                    float ball_y = ( bweight*(*data)[i][3] + 2*pweight*(*data)[j][3] - pweight*(*data)[i][3] ) / (pweight + bweight);
-                    float pin_x = ( pweight*(*data)[j][2] + 2*bweight*(*data)[i][2] - bweight*(*data)[j][2] ) / (pweight + bweight);
-                    float pin_y = ( pweight*(*data)[j][3] + 2*bweight*(*data)[i][3] - bweight*(*data)[j][3] ) / (pweight + bweight);
-                    (*data)[i][2] = ball_x;
-                    (*data)[i][3] = ball_y;
-                    (*data)[j][2] = pin_x;
-                    (*data)[j][3] = pin_y;
-                }
-            }
-            else if (i < j) {
-                if ( (sqrt ( pow((*data)[i][0] - (*data)[j][0], 2) + pow((*data)[i][1] - (*data)[j][1] , 2) ) < 0.1)) {
-                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
-                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    float pin1_x = ( pweight*(*data)[i][2] + 2*pweight*(*data)[j][2] - pweight*(*data)[i][2] ) / (pweight + pweight);
-                    float pin1_y = ( pweight*(*data)[i][3] + 2*pweight*(*data)[j][3] - pweight*(*data)[i][3] ) / (pweight + pweight);
-                    float pin2_x = ( pweight*(*data)[j][2] + 2*pweight*(*data)[i][2] - pweight*(*data)[j][2] ) / (pweight + pweight);
-                    float pin2_y = ( pweight*(*data)[j][3] + 2*pweight*(*data)[i][3] - pweight*(*data)[j][3] ) / (pweight + pweight);
-                    (*data)[i][2] = pin1_x;
-                    (*data)[i][3] = pin1_y;
-                    (*data)[j][2] = pin2_x;
-                    (*data)[j][3] = pin2_y; 
-                }
-            }
-        }
-    }
 }
 
 /*void reshape(int w, int h)
@@ -443,31 +409,14 @@ void collision(vector<float[4]> *data){
 
 	glMatrixMode(GL_MODELVIEW);
 	glViewport(0, 0, w, h);
-}*/
-
-/*void FPS(int val){
-	glutPostRedisplay();
-	glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
-}*/
-
-//Run at the beginning of runtime, to set up the globals properly
-void initialSetupLogic() {
-    AIMING = false;
-    HOLDING = false;
-    ROLLING = false;
-    STRIKING = false;
-    WAITING = true;
-    FRAME_COUNT = 1;
-    ROLL_COUNT = 0;
-    for (int i = 0; i < 10; i++){ PINS[i] = true; }
-    PINS_LEFT = 10;
-    CURRENT_PINS_HIT = 0;
-    startPoint.x = 0; startPoint.y = 0;
-    endPoint.x = 0; endPoint.y = 0;
 }
 
+void FPS(int val){
+	glutPostRedisplay();
+	glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
+}
 
-/*void callBackInit(){
+void callBackInit(){
 	glutDisplayFunc(display);	//registers "display" as the display callback function
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(special);
@@ -478,27 +427,41 @@ void initialSetupLogic() {
 	glutTimerFunc(0, FPS, 0);
 }
 
-/* main function - program entry point */
-/*int main(int argc, char** argv)
+/* main function - program entry point
+int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);		//starts up GLUT
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(50, 50);
 
-	glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator");	//creates the window
+	glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator (now with Collision!)");	//creates the window*/
 
-	callBackInit();
+	//callBackInit();
 
-	init();
+void initl(){
 
     srand(time(0));
-    initialSetup();
-
+    AIMING = true;
+    ROLLING = false;
+    STRIKING = false;
+    FRAME_COUNT = 1;
+    ROLL_COUNT = 0;
+    for (int i = 0; i < 10; i++){ 
+        PINS[i].present = true; 
+        PINS[i].original_x = PINS[i].x = original_positions[2*i];
+        PINS[i].original_y = PINS[i].y = original_positions[2*i+1];
+        PINS[i].vel_x = 0;
+        PINS[i].vel_y = 0;
+    }
+    PINS_LEFT = 10;
+    CURRENT_PINS_HIT = 0;
+    x_pos = 0;
+    y_pos = 0;
     cout << "Welcome to Ultra Optimized 60fps Bowling Simulator!\n";
     cout << "Roll: 1 Frame: 1 Score: 0\n";
 
-	glutMainLoop();				//starts the event glutMainLoop
-	return(0);					//return may not be necessary on all compilers
-}*/
+	//glutMainLoop();				//starts the event glutMainLoop
+	//return(0);					//return may not be necessary on all compilers
+}
