@@ -191,7 +191,7 @@ float x_vel;
 float y_vel;
 float x_pos;
 float y_pos;
-float bweight = 2.0;
+float bweight = 4.0;
 float pweight = 0.5;
 
 //Globals
@@ -225,14 +225,17 @@ Pin PINS[10];
 void throw_ball(){
     AIMING = false;
     ROLLING = true;
-    y_vel = -0.04;
+    y_vel = 0.06 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.1;
+    x_vel = 0.002 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.001;
+    printf("%f, %f\n",x_vel,y_vel);
 }
 
 void next_turn(){
     STRIKING = false;
     ROLLING = false;
     AIMING = true;
-    x_pos = y_pos = 0;
+    x_pos = y_pos = x_vel = y_vel = 0;
+
 
     for (int i = 0; i < 10; i++){
         if (PINS[i].present && (PINS[i].x != PINS[i].original_x || PINS[i].y != PINS[i].original_y)){
@@ -343,7 +346,9 @@ void next_turn(){
 void checkForEnd(){
     bool END_TURN = true;
     for (int i = 0; i < 10; i++){
-        if (PINS[i].vel_x > 0.0001 || PINS[i].vel_x < -0.0001 || PINS[i].vel_y > 0.0001 || PINS[i].vel_y < -0.0001){
+        if (PINS[i].y < -10.0) PINS[i].present = false; 
+        if (PINS[i].vel_x > 0.000005 || PINS[i].vel_x < -0.000005 || PINS[i].vel_y > 0.000005 || PINS[i].vel_y < -0.000005 || !PINS[i].present){
+            printf("pin %i still moving\n", i);
             END_TURN = false;
             break;
         }
@@ -361,11 +366,20 @@ void collision(){
                     PINS[j].present) {
                     if (!STRIKING) { STRIKING = true; ROLLING = false; }
                     //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    printf("collision!\n");
-                    float ball_x = ( bweight*x_vel + 2*pweight*PINS[j].vel_x - pweight*x_vel ) / (pweight + bweight);
-                    float ball_y = ( bweight*y_vel + 2*pweight*PINS[j].vel_y - pweight*y_vel ) / (pweight + bweight);
-                    float pin_x = ( pweight*PINS[j].vel_x + 2*bweight*x_vel - bweight*PINS[j].vel_x ) / (pweight + bweight);
-                    float pin_y = ( pweight*PINS[j].vel_y + 2*bweight*y_vel - bweight*PINS[j].vel_y ) / (pweight + bweight);
+                    //( bweight*x_vel + 2*pweight*PINS[j].vel_x - pweight*x_vel ) / (pweight + bweight);
+                    float vel_mag_ball = sqrt( pow(x_vel,2) + pow(y_vel,2) );
+                    float vel_mag_pin =  sqrt( pow(PINS[j].vel_x,2) + pow(PINS[j].vel_x,2) );
+                    float theta_ball = atan2(y_vel, x_vel);
+                    float theta_pin = atan2(PINS[j].vel_y, PINS[j].vel_x);
+                    float phi = atan2( PINS[j].y - y_pos, PINS[j].x -x_pos ); 
+                    float ball_x =  ((vel_mag_ball * cos(theta_ball - phi) * (bweight - pweight) + 2 * pweight * vel_mag_pin * cos( theta_pin - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_ball * sin(theta_ball - phi) * sin(phi);
+                    float ball_y =  ((vel_mag_ball * cos(theta_ball - phi) * (bweight - pweight) + 2 * pweight * vel_mag_pin * cos( theta_pin - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_ball * sin(theta_ball - phi) * cos(phi);
+                    float pin_x =   ((vel_mag_pin * cos(theta_pin - phi) * (pweight - bweight) + 2 * bweight * vel_mag_ball * cos( theta_ball - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_pin * sin(theta_pin - phi) * sin(phi);
+                    float pin_y =   ((vel_mag_pin * cos(theta_pin - phi) * (pweight - bweight) + 2 * bweight * vel_mag_ball * cos( theta_ball - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_pin * sin(theta_pin - phi) * cos(phi);
                     x_vel = ball_x;
                     y_vel = ball_y;
                     PINS[j].vel_x = pin_x;
@@ -377,15 +391,23 @@ void collision(){
                     PINS[i].present && PINS[j].present){
                     if (!STRIKING) { STRIKING = true; ROLLING = false; }
                     //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
-                    printf("collision!\n");
-                    float pin1_x = ( pweight*PINS[i].vel_x + 2*pweight*PINS[j].vel_x - pweight*PINS[i].vel_x ) / (pweight + pweight);
-                    float pin1_y = ( pweight*PINS[i].vel_y + 2*pweight*PINS[j].vel_y - pweight*PINS[i].vel_y ) / (pweight + pweight);
-                    float pin2_x = ( pweight*PINS[j].vel_x + 2*pweight*PINS[i].vel_x - pweight*PINS[j].vel_x ) / (pweight + pweight);
-                    float pin2_y = ( pweight*PINS[j].vel_y + 2*pweight*PINS[i].vel_y - pweight*PINS[j].vel_y ) / (pweight + pweight);
+                    float vel_mag_pin1 =  sqrt( pow(PINS[i].vel_x,2) + pow(PINS[i].vel_x,2) );
+                    float vel_mag_pin2 =  sqrt( pow(PINS[j].vel_x,2) + pow(PINS[j].vel_x,2) );
+                    float theta_pin1 = atan2(PINS[i].vel_y, PINS[i].vel_x);
+                    float theta_pin2 = atan2(PINS[j].vel_y, PINS[j].vel_x);
+                    float phi = atan2( PINS[j].y - y_pos, PINS[j].x -x_pos ); 
+                    float pin1_x =  ((vel_mag_pin1 * cos(theta_pin1 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin2 * cos( theta_pin2 - phi )) * cos(phi) /
+                                    (pweight + bweight)) + vel_mag_pin1 * sin(theta_pin1 - phi) * sin(phi);
+                    float pin1_y =  ((vel_mag_pin1 * cos(theta_pin1 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin2 * cos( theta_pin2 - phi )) * sin(phi) /
+                                    (pweight + bweight)) + vel_mag_pin1 * sin(theta_pin1 - phi) * cos(phi);
+                    float pin2_x =  ((vel_mag_pin2 * cos(theta_pin2 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin1 * cos( theta_pin1 - phi )) * cos(phi) /
+                                    (pweight + pweight)) + vel_mag_pin2 * sin(theta_pin2 - phi) * sin(phi);
+                    float pin2_y =  ((vel_mag_pin2 * cos(theta_pin2 - phi) * (pweight - pweight) + 2 * pweight * vel_mag_pin1 * cos( theta_pin1 - phi )) * sin(phi) /
+                                    (pweight + pweight)) + vel_mag_pin2 * sin(theta_pin2 - phi) * cos(phi);
                     PINS[i].vel_x = pin1_x;
                     PINS[i].vel_y = pin1_y;
                     PINS[j].vel_x = pin2_x;
-                    PINS[j].vel_y = pin2_y; 
+                    PINS[j].vel_y = pin2_y;
                 }
             }
         }
@@ -400,6 +422,9 @@ void keyboard(unsigned char key, int xIn, int yIn)
 	{
 		case 't':
             if (AIMING) throw_ball();
+            break;
+        case 'e':
+            if (STRIKING) next_turn();
             break;
 	}
 }
@@ -475,10 +500,10 @@ void display(void)
     for (int i = 0; i < 10; i++){
         PINS[i].x += PINS[i].vel_x;
         PINS[i].y += PINS[i].vel_y;
-        if (PINS[i].vel_x > 0.0001) PINS[i].vel_x -= 0.0001;
-        if (PINS[i].vel_y > 0.0001) PINS[i].vel_y -= 0.0001;
-        if (PINS[i].vel_x < -0.0001) PINS[i].vel_x += 0.0001;
-        if (PINS[i].vel_y < -0.0001) PINS[i].vel_y += 0.0001;
+        if (PINS[i].vel_x > 0.0000005) PINS[i].vel_x -= 0.0000005;
+        if (PINS[i].vel_y > 0.0000005) PINS[i].vel_y -= 0.0000005;
+        if (PINS[i].vel_x < -0.0000005) PINS[i].vel_x += 0.0000005;
+        if (PINS[i].vel_y < -0.0000005) PINS[i].vel_y += 0.0000005;
     }
 
     if (!AIMING) collision();
