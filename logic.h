@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 #include "point2d.h"
+#include "math.h"
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
@@ -80,23 +81,23 @@ void drawPowerLine() {
     updateSpeed();
 
     Point2D p;
-    if (startPoint.z >= endPoint.z) {
+    if (startPoint.y >= endPoint.y) {
         p.x = (startPoint.x - endPoint.x) / FOV;    //X value divided by FOV to allow for more precise angles
     } else {
         p.x = (endPoint.x - startPoint.x) / FOV;
     }
-    p.z = speed;
+    p.y = speed;
 
     x_vel = p.x/(2*FOV);
-    z_vel = -p.z/5;
+    z_vel = -p.y/5;
 
-    printf("p.x: %f, p.z: %f.\n", p.x, p.z);
+    //printf("p.x: %f, p.z: %f.\n", p.x, p.z);
 
     glBegin(GL_LINES);
         glColor3f(1, 1, 1);
         glLineWidth(1);
         glVertex3f(0, -0.5, 1);
-        glVertex3f(p.x,-0.5-p.z, 1); 
+        glVertex3f(p.x,-0.5-p.y, 1); 
     glEnd();
 }
 
@@ -366,9 +367,9 @@ void mousel(int btn, int state, int x, int y) {
 
             if (state == GLUT_DOWN) {   //Left Button held
                 startPoint.x = x;
-                startPoint.z = relativeY;
+                startPoint.y = relativeY;
                 endPoint.x = x;
-                endPoint.z = relativeY;
+                endPoint.y = relativeY;
                 HOLDING = true;
             }
         }
@@ -385,12 +386,36 @@ void motionl(int x, int y) {
 
     if (AIMING) { //if the current state is that of aiming the ball
         endPoint.x = x;
-        endPoint.z = relativeY;
+        endPoint.y = relativeY;
     }
 }
 
 void passivel(int x, int y){
 	//printf("mousePassive coords: %i,%i\n", x, y);
+}
+
+void checkCollision(vector<float[2]> *positions){
+    float ball_radius = 0.1;
+    float pin_radius = 0.05;
+
+    for (int i = 0; i < positions->size(); i++){
+        for (int j = 1; j < positions->size(); j++){
+            if (i == 0){
+                if ( sqrt ( pow(positions[i][0] - positions[j][0], 2) + pow(positions[i][1] - positions[j][1],2) )
+                    < ball_radius + pin_radius
+                    ){
+                    cout << "collision between ball and pin " + to_string(j) + "\n";
+                }
+            }
+            else if (i < j) {
+                if ( sqrt ( pow(positions[i][0] - positions[j][0], 2) + pow(positions[i][1] - positions[j][1],2) )
+                    < pin_radius*2
+                    ){
+                    cout << "collision between pins " + to_string(i) + " and " + to_string(j) + "\n"; 
+                }
+            }
+        }
+    }
 }
 
 /*void reshape(int w, int h)
@@ -421,8 +446,8 @@ void initialSetupLogic() {
     for (int i = 0; i < 10; i++){ PINS[i] = true; }
     PINS_LEFT = 10;
     CURRENT_PINS_HIT = 0;
-    startPoint.x = 0; startPoint.z = 0;
-    endPoint.x = 0; endPoint.z = 0;
+    startPoint.x = 0; startPoint.y = 0;
+    endPoint.x = 0; endPoint.y = 0;
 }
 
 
