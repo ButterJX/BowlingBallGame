@@ -25,7 +25,7 @@ const float pi = 3.14159;
 int winid;
 float cpos[] = {0.0, 1.5, 0.0};
 float cangle[] = {0, 0};
-float l1pos[] = {0, 1, 0, 1};
+float l1pos[] = {0, 5, 0, 1};
 float amb[] = {0.2, 0.2, 0.2, 1.0};
 float dif[] = {0.8, 0.8, 0.8, 1.0};
 float spec[] = {0.85, 0.85, 0.85, 1.0};
@@ -297,8 +297,7 @@ class Object{
 	float angle[3] = {0.0, 0.0, 0.0};
 	float scale[3] = {1.0, 1.0, 1.0};
 	int type;//0 = model, 1 = sphere
-	//float bound1[3];
-	//float b
+	float bounds[4];
 	Model* m;
 	public:
 	void setposx(float a){
@@ -367,6 +366,24 @@ class Object{
 	int gettype(){
 		return type;
 	}
+	void setbounds(float a, float b, float c, float d){
+		bounds[0] = a;
+		bounds[1] = b;
+		bounds[2] = c;
+		bounds[3] = d;
+	}
+	float getboundx1(){
+		return bounds[0];
+	}
+	float getboundz1(){
+		return bounds[1];
+	}
+	float getboundx2(){
+		return bounds[2];
+	}
+	float getboundz2(){
+		return bounds[3];
+	}
 };
 
 vector<Model> models;
@@ -392,6 +409,7 @@ void loadtexture(string k){
 }
 
 void init(void){
+	printf("h\n");
 	glClearColor(0, 0, 0, 0);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -420,31 +438,31 @@ void init(void){
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
 	models.push_back(Model());
-	models.back().setmodel("model");
+	printf("f\n");
+	models.back().setmodel("pin");
+	printf("h\n");
 	models.back().setnorms();
 	models.push_back(Model());
 	models.back().setmodel("lane");
 	models.back().setnorms();
-	objects.push_back(Object());
+	objects.push_back(Object());//lane
 	objects.back().settype(0);
 	objects.back().setmodel(&models[1]);
-	objects.push_back(Object());
-	objects.back().setposz(-5.0);
+	objects.push_back(Object());//ball
+	objects.back().setposx(x_pos);
+	objects.back().setposz(z_pos);
+	objects.back().settype(1);
+	objects.push_back(Object());//pins
+	objects.back().setposx(-1.0);
+	objects.back().setposz(-20.0);
 	objects.back().settype(0);
 	objects.back().setmodel(&models[0]);
 	objects.push_back(Object());
 	objects.back().setposx(1.0);
-	objects.back().setposy(1.0);
-	objects.back().setanglex(45.0);
-	objects.back().setangley(45.0);
-	objects.back().setscalex(0.5);
-	objects.back().setscalez(2.0);
+	objects.back().setposz(-20.0);
 	objects.back().settype(0);
 	objects.back().setmodel(&models[0]);
-	objects.push_back(Object());
-	objects.back().setposx(x_pos);
-	objects.back().setposz(y_pos);
-	objects.back().settype(1);
+	printf("i\n");
 }
 
 void reshape(int w, int h){
@@ -551,11 +569,21 @@ void passive(int x, int y){
 	passivel(x, y);
 }
 
+vector<float[2]> posit;
+
 void update(int){
-	objects[3].setposx(x_pos);
-	objects[3].setposz(y_pos);
+	objects[1].setposx(x_pos);
+	objects[1].setposz(z_pos);
+	float po[2];
+	for(int i = 1; i < objects.size(); i++){
+		po[0] = objects[1].getposx();
+		po[1] = objects[1].getposz();
+		posit.push_back(po)
+	}
+	checkCollision(&posit);
 	updatel();
-	if(keyw == true){
+	
+	/*if(keyw == true){
 		cpos[0] = cpos[0] - (sin(cangle[0] * (pi / 180.0)) / 2);
 		cpos[2] = cpos[2] - (cos(cangle[0] * (pi / 180.0)) / 2);
 	}
@@ -597,9 +625,9 @@ void update(int){
 		cangle[0] += 360.0;
 	}else if(cangle[0] >= 360.0){
 		cangle[0] -= 360.0;
-	}
+	}*/
 	glutPostRedisplay();
-	glutTimerFunc(1000.0 / 120.0, update, 0);
+	glutTimerFunc(1000.0 / 60.0, update, 0);
 }
 
 void drawobject(int i){
@@ -623,11 +651,8 @@ void display(void){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	displayl();
 	glPushMatrix();
-	glRotatef(-cangle[1], 1, 0, 0);
-	glRotatef(-cangle[0], 0, 1, 0);
-	glTranslatef(-cpos[0], -cpos[1], -cpos[2]);
+	displayl();
 	glLightfv(GL_LIGHT0, GL_POSITION, l1pos);
 	for(int i = 0; i < objects.size(); i++){
 		glPushMatrix();
@@ -639,7 +664,7 @@ void display(void){
 		if(objects[i].gettype() == 0){
 			drawobject(i);
 		}else if(objects[i].gettype() == 1){
-			glutSolidSphere(1.0, 6, 6);
+			glutSolidSphere(0.1, 10, 10);
 		}
 		glPopMatrix();
 	}
@@ -664,6 +689,7 @@ int main(int argc, char** argv){
 	glutPassiveMotionFunc(passive);
 	glutTimerFunc(1000.0 / 120.0, update, 0);
 	glutDisplayFunc(display);
+	printf("u\n");
 	initialSetupLogic();
 	init();
 	glutMainLoop();
