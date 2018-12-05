@@ -394,24 +394,40 @@ void passivel(int x, int y){
 	//printf("mousePassive coords: %i,%i\n", x, y);
 }
 
-void checkCollision(vector<float[2]> *positions){
-    float ball_radius = 0.1;
-    float pin_radius = 0.05;
-
-    for (int i = 0; i < positions->size(); i++){
-        for (int j = 1; j < positions->size(); j++){
-            if (i == 0){
-                if ( sqrt ( pow(positions[i][0] - positions[j][0], 2) + pow(positions[i][1] - positions[j][1],2) )
-                    < ball_radius + pin_radius
-                    ){
-                    cout << "collision between ball and pin " + to_string(j) + "\n";
+void collision(vector<float[4]> data){
+    //assumes pin radius of 0.05 and ball radius of 0.1
+    //assumes ball is last object in vector
+    float pweight = 0.5;
+    float bweight = 2.0;
+    for (int i = 0; i < 11; i++){
+        for (int j = 1; j < 10; j++){
+            //bowling ball vs pins
+            if (i == 10){
+                if ( (sqrt ( pow(data[i][0] - data[j][0], 2) + pow(data[i][1] - data[j][1],2) ) < 0.15)) {
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    float ball_x = ( bweight*data[i][2] + 2*pweight*data[j][2] - pweight*data[i][2] ) / (pweight + bweight);
+                    float ball_y = ( bweight*data[i][3] + 2*pweight*data[j][3] - pweight*data[i][3] ) / (pweight + bweight);
+                    float pin_x = ( pweight*data[j][2] + 2*bweight*data[i][2] - bweight*data[j][2] ) / (pweight + bweight);
+                    float pin_y = ( pweight*data[j][3] + 2*bweight*data[i][3] - bweight*data[j][3] ) / (pweight + bweight);
+                    data[i][2] = ball_x;
+                    data[i][3] = ball_y;
+                    data[j][2] = pin_x;
+                    data[j][3] = pin_y;
                 }
             }
             else if (i < j) {
-                if ( sqrt ( pow(positions[i][0] - positions[j][0], 2) + pow(positions[i][1] - positions[j][1],2) )
-                    < pin_radius*2
-                    ){
-                    cout << "collision between pins " + to_string(i) + " and " + to_string(j) + "\n"; 
+                if ( (sqrt ( pow(data[i][0] - data[j][0], 2) + pow(data[i][1] - data[j][1] , 2) ) < 0.1)) {
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    float pin1_x = ( pweight*data[i][2] + 2*pweight*data[j][2] - pweight*data[i][2] ) / (pweight + pweight);
+                    float pin1_y = ( pweight*data[i][3] + 2*pweight*data[j][3] - pweight*data[i][3] ) / (pweight + pweight);
+                    float pin2_x = ( pweight*data[j][2] + 2*pweight*data[i][2] - pweight*data[j][2] ) / (pweight + pweight);
+                    float pin2_y = ( pweight*data[j][3] + 2*pweight*data[i][3] - pweight*data[j][3] ) / (pweight + pweight);
+                    data[i][2] = pin1_x;
+                    data[i][3] = pin1_y;
+                    data[j][2] = pin2_x;
+                    data[j][3] = pin2_y; 
                 }
             }
         }

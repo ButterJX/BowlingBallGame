@@ -157,6 +157,7 @@ int main(){
 #include <fstream>
 #include <vector>
 #include <ctime>
+#include <math.h>
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
@@ -176,7 +177,6 @@ bool ROLLING;
 bool STRIKING;
 
 //pin state values
-bool PINS[10];
 int PINS_LEFT;
 int CURRENT_PINS_HIT;
 
@@ -191,11 +191,36 @@ float x_vel;
 float y_vel;
 float x_pos;
 float y_pos;
+float bweight = 2.0;
+float pweight = 0.5;
 
 //Globals
 float throwCamPos[] = {0.0f, 2.0f, 1.0f};	//where the camera is when throwing
 float pinCamPos[] = {0.0f, -8.5f, 1.5f};    //where the camera is when hitting pins
 float ballCamPos[] = {0.8f, 1.8f, 0.8f};    //follow postion wrt ball
+
+float original_positions[] = {
+    0.3,    -9.5,
+    0.1,    -9.5,
+    -0.1,   -9.5,
+    -0.3,   -9.5,
+    0.2,    -9.3268,
+    0.0,    -9.3268,
+    -0.2,   -9.3268,
+    0.1,    -9.1536,
+    -0.1,   -9.1536,
+    0.0,    -8.9804
+};
+
+class Pin{
+    public:
+    float original_x, original_y;
+    float x, y;
+    float vel_x, vel_y;
+    bool present;
+};
+
+Pin PINS[10];
 
 void throw_ball(){
     AIMING = false;
@@ -203,31 +228,19 @@ void throw_ball(){
     y_vel = -0.04;
 }
 
-void strike_pins(){
-    if (!STRIKING){
-        ROLLING = false;
-        STRIKING = true;
-        PINS_LEFT = 0;
-        int random = rand();
-        //randomly hits or misses pins. in reality, we will want to iterate through each pin to check whether it has changed position or not
-        for (int i = 0; i < 10; i++){
-           if (PINS[i]){
-               random = rand();
-               PINS[i] = random%2;
-               if (!PINS[i]){
-                   CURRENT_PINS_HIT++;
-                }
-            }
-            if (PINS[i]){
-                PINS_LEFT++;
-            }
-        }
-    }
-}
-
 void next_turn(){
     STRIKING = false;
+    ROLLING = false;
     AIMING = true;
+    x_pos = y_pos = 0;
+
+    for (int i = 0; i < 10; i++){
+        if (PINS[i].present && (PINS[i].x != PINS[i].original_x || PINS[i].y != PINS[i].original_y)){
+            PINS[i].present = false;
+            CURRENT_PINS_HIT++;
+        }
+    }
+    PINS_LEFT -= CURRENT_PINS_HIT;
     
     //for determining the next frame and roll
     if (FRAME_COUNT < 10){
@@ -238,8 +251,15 @@ void next_turn(){
         else{
             cout << "You hit " +  to_string(CURRENT_PINS_HIT) +  " pins and " + to_string(10 - PINS_LEFT) + " in total this frame.\n";
             ROLL_COUNT = 0;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
             FRAME_COUNT++;
+            PINS_LEFT = 10;
         }
     }
     else {
@@ -250,8 +270,15 @@ void next_turn(){
         else{
             cout << "You hit " +  to_string(CURRENT_PINS_HIT) +  " pins and " + to_string(10 - PINS_LEFT) + " in total this frame.\n";
             ROLL_COUNT = 0;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
             FRAME_COUNT++;
+            PINS_LEFT = 10;
         }
     }
     
@@ -278,14 +305,28 @@ void next_turn(){
             DOUBLE_POINTS = 2;
             ROLL_COUNT = 0;
             FRAME_COUNT++;
-            for (int i = 0; i < 10; i++){ PINS[i] = true; }
+            for (int i = 0; i < 10; i++){ 
+                PINS[i].present = true; 
+                PINS[i].x = PINS[i].original_x;
+                PINS[i].y = PINS[i].original_y;
+                PINS[i].vel_x = 0;
+                PINS[i].vel_y = 0;
+            }
+            PINS_LEFT = 10;
         }
         else {
             DOUBLE_POINTS = 1;
             cout << "SPARE!\n";
             if (FRAME_COUNT == 10 && ROLL_COUNT == 2){
-                for (int i = 0; i < 10; i++){ PINS[i] = true; }
+                for (int i = 0; i < 10; i++){ 
+                    PINS[i].present = true; 
+                    PINS[i].x = PINS[i].original_x;
+                    PINS[i].y = PINS[i].original_y;
+                    PINS[i].vel_x = 0;
+                    PINS[i].vel_y = 0;
+                }
             }
+            PINS_LEFT = 10;
         }
     }
     if (FRAME_COUNT == 11) {
@@ -296,6 +337,58 @@ void next_turn(){
     else {
         cout << "\nRoll: " + to_string(ROLL_COUNT+1) + " Frame: " + to_string(FRAME_COUNT) + " Score: " + to_string(SCORE);
         cout << "\n";
+    }
+}
+
+void checkForEnd(){
+    bool END_TURN = true;
+    for (int i = 0; i < 10; i++){
+        if (PINS[i].vel_x > 0.0001 || PINS[i].vel_x < -0.0001 || PINS[i].vel_y > 0.0001 || PINS[i].vel_y < -0.0001){
+            END_TURN = false;
+            break;
+        }
+    }
+    if (END_TURN) next_turn();
+}
+
+void collision(){
+    
+    for (int i = 0; i < 11; i++){
+        for (int j = 1; j < 10; j++){
+            if (i == 10){
+                //printf("%f\n",sqrt ( pow(x_pos - PINS[j].x, 2) + pow(y_pos - PINS[j].y,2) ));
+                if ( (sqrt ( pow(x_pos - PINS[j].x, 2) + pow(y_pos - PINS[j].y,2) ) < 0.15) &&
+                    PINS[j].present) {
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    printf("collision!\n");
+                    float ball_x = ( bweight*x_vel + 2*pweight*PINS[j].vel_x - pweight*x_vel ) / (pweight + bweight);
+                    float ball_y = ( bweight*y_vel + 2*pweight*PINS[j].vel_y - pweight*y_vel ) / (pweight + bweight);
+                    float pin_x = ( pweight*PINS[j].vel_x + 2*bweight*x_vel - bweight*PINS[j].vel_x ) / (pweight + bweight);
+                    float pin_y = ( pweight*PINS[j].vel_y + 2*bweight*y_vel - bweight*PINS[j].vel_y ) / (pweight + bweight);
+                    x_vel = ball_x;
+                    y_vel = ball_y;
+                    PINS[j].vel_x = pin_x;
+                    PINS[j].vel_y = pin_y;
+                }
+            }
+            else if (i < j) {
+                if ( (sqrt ( pow(PINS[i].x - PINS[j].x, 2) + pow(PINS[i].y - PINS[j].y , 2) ) < 0.1) &&
+                    PINS[i].present && PINS[j].present){
+                    if (!STRIKING) { STRIKING = true; ROLLING = false; }
+                    //v1f = (m1*v1i + 2*m2*v2i - m2*v1i) / (m1 + m2)
+                    printf("collision!\n");
+                    float pin1_x = ( pweight*PINS[i].vel_x + 2*pweight*PINS[j].vel_x - pweight*PINS[i].vel_x ) / (pweight + pweight);
+                    float pin1_y = ( pweight*PINS[i].vel_y + 2*pweight*PINS[j].vel_y - pweight*PINS[i].vel_y ) / (pweight + pweight);
+                    float pin2_x = ( pweight*PINS[j].vel_x + 2*pweight*PINS[i].vel_x - pweight*PINS[j].vel_x ) / (pweight + pweight);
+                    float pin2_y = ( pweight*PINS[j].vel_y + 2*pweight*PINS[i].vel_y - pweight*PINS[j].vel_y ) / (pweight + pweight);
+                    PINS[i].vel_x = pin1_x;
+                    PINS[i].vel_y = pin1_y;
+                    PINS[j].vel_x = pin2_x;
+                    PINS[j].vel_y = pin2_y; 
+                }
+            }
+        }
     }
 }
 
@@ -357,42 +450,16 @@ void display(void)
 
     glPushMatrix();
         //pins
-        glTranslatef(0.3, -9.5, 0.05);
+        glTranslatef(0, 0, 0.05);
         glColor3f(1.0f, 1.0f, 1.0f);
-        glPushMatrix();
-            //back row
-            if (PINS[0]) glutSolidCone(0.075, 0.5, 10, 10);
-            
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[1]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[2]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[3]) glutSolidCone(0.075, 0.5, 10, 10);
-            
-            //3rd row
-            glTranslatef(0.1, 0.1732, 0.0);
-            if (PINS[4]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(0.6/3.0, 0, 0);
-            if (PINS[5]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(0.6/3.0, 0, 0);
-            if (PINS[6]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            //2nd row
-            glTranslatef(-0.1, 0.1732, 0.0);
-            if (PINS[7]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            glTranslatef(-0.6/3.0, 0, 0);
-            if (PINS[8]) glutSolidCone(0.075, 0.5, 10, 10);
-
-            //1st row
-            glTranslatef(0.1, 0.1732, 0.0);
-            if (PINS[9]) glutSolidCone(0.075, 0.5, 10, 10);
-        glPopMatrix();
+        for (int i = 0; i < 10; i++){    
+            glPushMatrix();
+                if (PINS[i].present){ 
+                    glTranslatef(PINS[i].x, PINS[i].y, 0);
+                    glutSolidCone(0.05, 0.4, 10, 10);
+                }
+            glPopMatrix();
+        }
     glPopMatrix();
 
     glPushMatrix();
@@ -404,14 +471,29 @@ void display(void)
 
     x_pos+=x_vel;
     y_pos+=y_vel;
-    
-    if(y_pos <= -9.0) {
-        strike_pins();
+
+    for (int i = 0; i < 10; i++){
+        PINS[i].x += PINS[i].vel_x;
+        PINS[i].y += PINS[i].vel_y;
+        if (PINS[i].vel_x > 0.0001) PINS[i].vel_x -= 0.0001;
+        if (PINS[i].vel_y > 0.0001) PINS[i].vel_y -= 0.0001;
+        if (PINS[i].vel_x < -0.0001) PINS[i].vel_x += 0.0001;
+        if (PINS[i].vel_y < -0.0001) PINS[i].vel_y += 0.0001;
     }
+
+    if (!AIMING) collision();
+
+    if (STRIKING)
+        checkForEnd();
+    
     if(y_pos <= -10.0) {
-        next_turn();
         y_vel = 0;
+        x_vel = 0;
+        x_pos = 0;
         y_pos = 0;
+        if (!STRIKING && !AIMING){
+            next_turn();
+        }
     }
 
 	glutSwapBuffers();
@@ -480,7 +562,7 @@ int main(int argc, char** argv)
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(50, 50);
 
-	glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator");	//creates the window
+	glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator (now with Collision!)");	//creates the window
 
 	callBackInit();
 
@@ -492,7 +574,13 @@ int main(int argc, char** argv)
     STRIKING = false;
     FRAME_COUNT = 1;
     ROLL_COUNT = 0;
-    for (int i = 0; i < 10; i++){ PINS[i] = true; }
+    for (int i = 0; i < 10; i++){ 
+        PINS[i].present = true; 
+        PINS[i].original_x = PINS[i].x = original_positions[2*i];
+        PINS[i].original_y = PINS[i].y = original_positions[2*i+1];
+        PINS[i].vel_x = 0;
+        PINS[i].vel_y = 0;
+    }
     PINS_LEFT = 10;
     CURRENT_PINS_HIT = 0;
     x_pos = 0;
