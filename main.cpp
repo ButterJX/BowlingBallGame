@@ -24,16 +24,13 @@ using namespace std;
 const float pi = 3.14159;
 
 int winid;
-float cpos[] = {0.0, 1.5, 0.0};
-float cangle[] = {0, 0};
-float l1pos[] = {0, 5, 0, 1};
+float cpos[] = {0.0, 1.5, 0.0};//camera position
+float cangle[] = {0, 0};//camera angle
+float l1pos[] = {0, 5, 0, 1};//position of lights
 float l2pos[] = {0, 5, -6, 1};
 float amb[] = {0.2, 0.2, 0.2, 1.0};
 float dif[] = {0.8, 0.8, 0.8, 1.0};
 float spec[] = {0.85, 0.85, 0.85, 1.0};
-float ambh[] = {0.3, 0.0, 0.0, 1.0};
-float difh[] = {0.8, 0.0, 0.0, 1.0};
-float spech[] = {1.0, 0.0, 0.0, 1.0};
 float l1amb[] = {0.2, 0.2, 0.2, 1.0};
 float l1dif[] = {0.8, 0.8, 0.8, 1.0};
 float l1spec[] = {0.85, 0.85, 0.85, 1.0};
@@ -43,7 +40,7 @@ float ballspec[] = {0.5, 0.5, 0.5, 1.0};
 float pinamb[] = {0.2, 0.2, 0.2, 1.0};
 float pindif[] = {0.8, 0.8, 0.8, 1.0};
 float pinspec[] = {0.85, 0.85, 0.85, 1.0};
-float t[3145728];
+float t[3145728];//buffer for texture data
 bool m1 = false;
 GLuint tex[2];
 string texnames[2] = {"wood.ppm", "wood2.ppm"};
@@ -189,7 +186,7 @@ class Model{
 		string c[3];
 		string uv[3];
 		string t;
-		ifstream f(file);
+		ifstream f(file);//loading model file
 		getline(f, a);
 		r = stoi(a);
 		points.reserve(r * 3);
@@ -266,7 +263,7 @@ class Model{
 		float n1[3];
 		float n2[3];
 		float h1, h2, h3, h4;
-		for(int i = 0; i < tri.size(); i++){
+		for(int i = 0; i < tri.size(); i++){//calculate face normals
 			n1[0] = (*tri[i].gete2()).getx() - (*tri[i].gete1()).getx();
 			n1[1] = (*tri[i].gete2()).gety() - (*tri[i].gete1()).gety();
 			n1[2] = (*tri[i].gete2()).getz() - (*tri[i].gete1()).getz();
@@ -281,7 +278,7 @@ class Model{
 			tri[i].setnormy(h2 / h4);
 			tri[i].setnormz(h3 / h4);
 		}
-		for(int i = 0; i < points.size(); i++){
+		for(int i = 0; i < points.size(); i++){//calculate vertex normals, lighting calculations use these
 			h1 = 0;
 			h2 = 0;
 			h3 = 0;
@@ -304,7 +301,7 @@ class Object{
 	float pos[3] = {0.0, 0.0, 0.0};
 	float angle[3] = {0.0, 0.0, 0.0};
 	float scale[3] = {1.0, 1.0, 1.0};
-	int type;//0 = model, 1 = sphere
+	int type;//0 = lane, 1 = sphere
 	Model* m;
 	public:
 	void setposx(float a){
@@ -378,7 +375,7 @@ class Object{
 vector<Model> models;
 vector<Object> objects;
 
-void loadtexture(string k){
+void loadtexture(string k){//loads texture from file
 	int h;
 	string a;
 	string b;
@@ -398,7 +395,6 @@ void loadtexture(string k){
 }
 
 void init(void){
-	printf("h\n");
 	glClearColor(0, 0, 0, 0);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -421,7 +417,7 @@ void init(void){
 	gluPerspective(30, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1, 500.0);
 	glMatrixMode(GL_MODELVIEW);
 	glGenTextures(2, tex);
-	for(int i = 0; i < 2; i++){
+	for(int i = 0; i < 2; i++){//loading textures into vram
 		loadtexture(texnames[i]);
 		glBindTexture(GL_TEXTURE_2D, tex[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_FLOAT, t);
@@ -433,8 +429,8 @@ void init(void){
 	models.push_back(Model());
 	models.back().setmodel("lane");
 	models.back().setnorms();
-	objects.push_back(Object());//lane
-	objects.back().settype(0);
+	objects.push_back(Object());//create objects
+	objects.back().settype(0);//lane
 	objects.back().setscalez(0.5);
 	objects.back().setmodel(&models[0]);
 	objects.push_back(Object());//ball
@@ -492,71 +488,21 @@ void passive(int x, int y){
 }
 
 void update(int){
-	objects[1].setposx(x_pos);
+	objects[1].setposx(x_pos);//update ball position
 	objects[1].setposz(y_pos);
-	objects[1].setanglex(objects[1].getanglex() + (y_vel * 50.0));
+	objects[1].setanglex(objects[1].getanglex() + (y_vel * 50.0));//causes ball to appear to roll
 	objects[1].setanglez(objects[1].getanglez() - (x_vel * 50.0));
-	for(int i = 0; i < 10; i++){
+	for(int i = 0; i < 10; i++){//update pin positions
 		objects[i + 2].setposx(PINS[i].x);
 		objects[i + 2].setposz(PINS[i].y);
 	}
-	/*float po[2];
-	for(int i = 1; i < objects.size(); i++){
-		po[0] = objects[1].getposx();
-		po[1] = objects[1].getposz();
-		posit.push_back(po);
-	}*/
-	collision();
+	collision();//check for collisions
 	updatel();
-	
-	/*if(keyw == true){
-		cpos[0] = cpos[0] - (sin(cangle[0] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] - (cos(cangle[0] * (pi / 180.0)) / 2);
-	}
-	if(keys == true){
-		cpos[0] = cpos[0] + (sin(cangle[0] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] + (cos(cangle[0] * (pi / 180.0)) / 2);
-	}
-	if(keya == true){
-		cpos[0] = cpos[0] - (cos(cangle[0] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] + (sin(cangle[0] * (pi / 180.0)) / 2);
-	}
-	if(keyd == true){
-		cpos[0] = cpos[0] + (cos(cangle[0] * (pi / 180.0)) / 2);
-		cpos[2] = cpos[2] - (sin(cangle[0] * (pi / 180.0)) / 2);
-	}
-	if(keyq == true){
-		cpos[1] = cpos[1] - 0.5;
-	}
-	if(keye == true){
-		cpos[1] = cpos[1] + 0.5;
-	}
-	if(keyup == true){
-		if(cangle[1] < 90){
-			cangle[1] = cangle[1] + 2;
-		}
-	}
-	if(keydown == true){
-		if(cangle[1] > -90){
-			cangle[1] = cangle[1] - 2;
-		}
-	}
-	if(keyleft == true){
-		cangle[0] = cangle[0] + 2;
-	}
-	if(keyright == true){
-		cangle[0] = cangle[0] - 2;
-	}
-	if(cangle[0] < 0.0){
-		cangle[0] += 360.0;
-	}else if(cangle[0] >= 360.0){
-		cangle[0] -= 360.0;
-	}*/
 	glutPostRedisplay();
 	glutTimerFunc(1000.0 / 60.0, update, 0);
 }
 
-void drawobject(int i){
+void drawobject(int i){//draw model to screen
 	for(int j = 0; j < (*objects[i].getmodel()).tril(); j++){
 		glBindTexture(GL_TEXTURE_2D, tex[(*(*objects[i].getmodel()).gettri(j)).gettexid()]);
 		glBegin(GL_TRIANGLES);
@@ -616,7 +562,7 @@ void display(void){
 	}
 	glPopMatrix();
 	if(m1 == true){
-		drawPowerLine();
+		drawPowerLine();//draw the line
 	}
 	glutSwapBuffers();
 }
@@ -630,9 +576,7 @@ int main(int argc, char** argv){
 	glutReshapeFunc(reshape);
 	glutIgnoreKeyRepeat(1);
 	glutKeyboardFunc(keyboard);
-	//glutKeyboardUpFunc(keyboardup);
 	glutSpecialFunc(special);
-	//glutSpecialUpFunc(specialup);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 	glutPassiveMotionFunc(passive);
