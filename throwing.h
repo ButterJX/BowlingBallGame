@@ -46,6 +46,9 @@ void release(int x, int y, float* fl){
 	endPoint.x = (float)x;
 	endPoint.y = (float)y;
 	r = sqrt(pow(endPoint.x - startPoint.x, 2.0) + pow(endPoint.y - startPoint.y, 2.0));
+	if(r == 0){
+		r = 1.0;
+	}
 	float d = distance(startPoint, endPoint);
 	if (d > WH_COMP) {
 		fl[0] = MAX_SPEED;
