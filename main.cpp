@@ -466,14 +466,16 @@ void special(int key, int xin, int yin){
 
 void mouse(int btn, int state, int x, int y){
 	mousel(btn, state, x, y);
-	if(btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-		start(x, WINDOW_HEIGHT - y);
-		m1 = true;
-	}else if(btn == GLUT_LEFT_BUTTON && state == GLUT_UP){
-		float fl[3];
-		release(x, WINDOW_HEIGHT - y, fl);
-		throw_ball(fl);
-		m1 = false;
+	if(AIMING == true){
+		if(btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+			start(x, WINDOW_HEIGHT - y);
+			m1 = true;
+		}else if(btn == GLUT_LEFT_BUTTON && state == GLUT_UP){
+			float fl[3];
+			release(x, WINDOW_HEIGHT - y, fl);
+			throw_ball(fl);
+			m1 = false;
+		}
 	}
 }
 
