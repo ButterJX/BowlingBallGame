@@ -42,7 +42,7 @@ float bweight = 4.0;
 float pweight = 0.5;
 
 //Globals
-float throwCamPos[] = {0.0f, -2.0f, 1.0f};	//where the camera is when throwing
+float throwCamPos[] = {0.0f, -2.0f, 1.0f};  //where the camera is when throwing
 float pinCamPos[] = {0.0f, -8.5f, 1.5f};    //where the camera is when hitting pins
 float ballCamPos[] = {0.8f, 1.8f, 0.8f};    //follow postion wrt ball
 
@@ -72,7 +72,7 @@ Pin PINS[10];
 void throw_ball(float* fl){
     AIMING = false;
     ROLLING = true;
-	float angle = atan2(fl[2], fl[1]);
+    float angle = atan2(fl[2], fl[1]);
     y_vel = fl[0] * 0.001 * -sin(angle);//0.06 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.1;
     x_vel = fl[0] * 0.001 * cos(angle);//0.002 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.001;
     printf("%f, %f\n",x_vel,y_vel);
@@ -265,26 +265,30 @@ void collision(){
 //OpenGL functions
 void keyboardl(unsigned char key, int xIn, int yIn)
 {
-	int mod = glutGetModifiers();
-	switch (key)
-	{
-		/*case 't':
+    int mod = glutGetModifiers();
+    switch (key)
+    {
+        /*case 't':
             if (AIMING) throw_ball();
             break;*/
+        case 'q':
+        case 27:
+            exit(0);
+            break;
         case 'e':
             if (STRIKING) next_turn();
             break;
-	}
+    }
 }
 
 /*void init(void)
 {
-	glClearColor(0, 0, 0, 0);
-	glColor3f(1, 1, 1);
+    glClearColor(0, 0, 0, 0);
+    glColor3f(1, 1, 1);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(45, 1, 1, 100);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45, 1, 1, 100);
 }*/
 
 /* display function - GLUT display callback function
@@ -292,18 +296,18 @@ void keyboardl(unsigned char key, int xIn, int yIn)
  */
 void displayl(void)
 {
-	/*glClear(GL_COLOR_BUFFER_BIT);
+    /*glClear(GL_COLOR_BUFFER_BIT);
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();*/
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();*/
 
-	if (AIMING) {
+    if (AIMING) {
         gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[2] + y_pos + 1.0, 0.0, 0.0, -9.5, 0,1,0);
     }else if ((ROLLING && y_pos < -7.5) || STRIKING){
         gluLookAt(pinCamPos[0], pinCamPos[2], pinCamPos[1], 0.0, 0.0, -9.5, 0,1,0);
     }else if (ROLLING){
         gluLookAt(ballCamPos[0] + x_pos, ballCamPos[2], ballCamPos[1] + y_pos, x_pos, 0.0, y_pos, 0,1,0);
-	}
+    }
 }
     /*glPushMatrix();
         //lane
@@ -341,7 +345,7 @@ void displayl(void)
         glTranslatef(x_pos, -0.5 + y_pos, 0.1);
         glColor3f(0.1, 0.1, 0.1);
         glutSolidSphere(0.1, 10, 10);
-	glPopMatrix();*/
+    glPopMatrix();*/
 void updatel(){
 
     x_pos+=x_vel;
@@ -361,7 +365,8 @@ void updatel(){
     if (STRIKING)
         checkForEnd();
     
-    if(y_pos <= -10.0) {
+    if(y_pos <= -10.0 || x_pos > 2 || x_pos < -2 || y_pos > 1) {
+        printf("y_pos: %f, x_pos: %f", y_pos, x_pos);
         y_vel = 0;
         x_vel = 0;
         x_pos = 0;
@@ -371,75 +376,75 @@ void updatel(){
         }
     }
 
-	//glutSwapBuffers();
+    //glutSwapBuffers();
 }
 
 void speciall(int key, int x, int y){
-	switch (key){
-	case GLUT_KEY_UP:
-		printf("Up Arrow was pressed!\n");
-		break;
+    switch (key){
+    case GLUT_KEY_UP:
+        printf("Up Arrow was pressed!\n");
+        break;
 
-	case GLUT_KEY_DOWN:
-		printf("Down Arrow was pressed!\n");
-		break;
-	}
+    case GLUT_KEY_DOWN:
+        printf("Down Arrow was pressed!\n");
+        break;
+    }
 }
 
 void mousel(int btn, int state, int x, int y){
-	if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         //mouse controls if any
         cout << "mouse memes\n";
     }
 }
 
 void motionl(int x, int y){
-	//printf("mouseMotion coords: %i,%i\n", x, y);
+    //printf("mouseMotion coords: %i,%i\n", x, y);
 }
 
 void passivel(int x, int y){
-	//printf("mousePassive coords: %i,%i\n", x, y);
+    //printf("mousePassive coords: %i,%i\n", x, y);
 }
 
 /*void reshape(int w, int h)
 {
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	//gluOrtho2D(0, w, 0, h);
-	gluPerspective(45, (float)((w+0.0f)/h), 1, 100);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    //gluOrtho2D(0, w, 0, h);
+    gluPerspective(45, (float)((w+0.0f)/h), 1, 100);
 
-	glMatrixMode(GL_MODELVIEW);
-	glViewport(0, 0, w, h);
+    glMatrixMode(GL_MODELVIEW);
+    glViewport(0, 0, w, h);
 }
 
 void FPS(int val){
-	glutPostRedisplay();
-	glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
+    glutPostRedisplay();
+    glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
 }
 
 void callBackInit(){
-	glutDisplayFunc(display);	//registers "display" as the display callback function
-	glutKeyboardFunc(keyboard);
-	glutSpecialFunc(special);
-	glutMouseFunc(mouse);
-	glutMotionFunc(motion);
-	glutPassiveMotionFunc(passive);
-	glutReshapeFunc(reshape);
-	glutTimerFunc(0, FPS, 0);
+    glutDisplayFunc(display);   //registers "display" as the display callback function
+    glutKeyboardFunc(keyboard);
+    glutSpecialFunc(special);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+    glutPassiveMotionFunc(passive);
+    glutReshapeFunc(reshape);
+    glutTimerFunc(0, FPS, 0);
 }
 
 /* main function - program entry point
 int main(int argc, char** argv)
 {
-	glutInit(&argc, argv);		//starts up GLUT
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+    glutInit(&argc, argv);      //starts up GLUT
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 
-	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(50, 50);
+    glutInitWindowSize(500, 500);
+    glutInitWindowPosition(50, 50);
 
-	glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator (now with Collision!)");	//creates the window*/
+    glutCreateWindow("3GC3: Ultra Optimized 60fps Bowling Simulator (now with Collision!)");    //creates the window*/
 
-	//callBackInit();
+    //callBackInit();
 
 void initl(){
 
@@ -463,6 +468,6 @@ void initl(){
     cout << "Welcome to Ultra Optimized 60fps Bowling Simulator!\n";
     cout << "Roll: 1 Frame: 1 Score: 0\n";
 
-	//glutMainLoop();				//starts the event glutMainLoop
-	//return(0);					//return may not be necessary on all compilers
+    //glutMainLoop();               //starts the event glutMainLoop
+    //return(0);                    //return may not be necessary on all compilers
 }
