@@ -500,6 +500,12 @@ void update(int){
 	}
 	collision();//check for collisions
 	updatel();
+	if(y_pos > 1.0 || y_pos < -20.0){
+		next_turn();
+	}
+	if(x_pos > 1.5 || x_pos < -1.5){
+		x_vel = 0.0;
+	}
 	glutPostRedisplay();
 	glutTimerFunc(1000.0 / 60.0, update, 0);
 }
