@@ -42,7 +42,7 @@ float bweight = 4.0;
 float pweight = 0.5;
 
 //Globals
-float throwCamPos[] = {0.0f, 4.0f, 1.0f};	//where the camera is when throwing
+float throwCamPos[] = {0.0f, -2.0f, 1.0f};	//where the camera is when throwing
 float pinCamPos[] = {0.0f, -8.5f, 1.5f};    //where the camera is when hitting pins
 float ballCamPos[] = {0.8f, 1.8f, 0.8f};    //follow postion wrt ball
 
@@ -69,11 +69,12 @@ class Pin{
 
 Pin PINS[10];
 
-void throw_ball(){
+void throw_ball(float* fl){
     AIMING = false;
     ROLLING = true;
-    y_vel = 0.06 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.1;
-    x_vel = 0.002 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.001;
+	float angle = atan2(fl[2], fl[1]);
+    y_vel = fl[0] * 0.001 * -sin(angle);//0.06 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.1;
+    x_vel = fl[0] * 0.001 * cos(angle);//0.002 * (double) (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) - 0.001;
     printf("%f, %f\n",x_vel,y_vel);
 }
 
@@ -267,9 +268,9 @@ void keyboardl(unsigned char key, int xIn, int yIn)
 	int mod = glutGetModifiers();
 	switch (key)
 	{
-		case 't':
+		/*case 't':
             if (AIMING) throw_ball();
-            break;
+            break;*/
         case 'e':
             if (STRIKING) next_turn();
             break;
@@ -297,7 +298,7 @@ void displayl(void)
 	glLoadIdentity();*/
 
 	if (AIMING) {
-        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[2] + y_pos, 0.0, 0.0, -9.5, 0,1,0);
+        gluLookAt(throwCamPos[0] + x_pos, throwCamPos[2], throwCamPos[2] + y_pos + 1.0, 0.0, 0.0, -9.5, 0,1,0);
     }else if ((ROLLING && y_pos < -7.5) || STRIKING){
         gluLookAt(pinCamPos[0], pinCamPos[2], pinCamPos[1], 0.0, 0.0, -9.5, 0,1,0);
     }else if (ROLLING){
