@@ -562,7 +562,7 @@ void display(void){
 			glMaterialfv(GL_FRONT, GL_AMBIENT, pinamb);
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, pindif);
 			glMaterialfv(GL_FRONT, GL_SPECULAR, pinspec);
-			glutSolidCylinder(0.1, 0.4, 10, 10);
+			glutSolidCylinder(0.05, 0.4, 10, 10);
 			glEnable(GL_TEXTURE_2D);
 			glPopMatrix();
 		}

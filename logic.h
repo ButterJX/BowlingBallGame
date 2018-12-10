@@ -38,8 +38,8 @@ float x_vel;
 float y_vel;
 float x_pos;
 float y_pos;
-float bweight = 4.0;
-float pweight = 0.5;
+float bweight = 12.0;
+float pweight = 1.0;
 
 //Globals
 float throwCamPos[] = {0.0f, -2.0f, 1.0f};	//where the camera is when throwing
